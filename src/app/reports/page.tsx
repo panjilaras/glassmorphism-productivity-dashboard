@@ -74,7 +74,7 @@ export default function ReportsPage() {
     datasets: [
       {
         label: 'Total Points Completed',
-        data: [145, 162, 178, 198, 215, 235],
+        data: [0, 0, 0, 0, 0, 0],
         borderColor: 'rgb(168, 135, 255)',
         backgroundColor: 'rgba(168, 135, 255, 0.1)',
         fill: true,
@@ -82,7 +82,7 @@ export default function ReportsPage() {
       },
       {
         label: 'Average Points per Task',
-        data: [6.5, 7.2, 7.8, 8.2, 8.5, 9.2],
+        data: [0, 0, 0, 0, 0, 0],
         borderColor: 'rgb(135, 206, 250)',
         backgroundColor: 'rgba(135, 206, 250, 0.1)',
         fill: true,
@@ -97,13 +97,13 @@ export default function ReportsPage() {
     datasets: [
       {
         label: 'Tasks Completed',
-        data: [42, 58, 28, 35, 22],
+        data: [0, 0, 0, 0, 0],
         backgroundColor: [
-          'rgba(230, 230, 250, 0.7)', // Lavender
-          'rgba(173, 216, 230, 0.7)', // Light Blue
-          'rgba(255, 182, 193, 0.7)', // Light Pink
-          'rgba(255, 218, 185, 0.7)', // Peach
-          'rgba(221, 160, 221, 0.7)', // Plum
+          'rgba(230, 230, 250, 0.7)',
+          'rgba(173, 216, 230, 0.7)',
+          'rgba(255, 182, 193, 0.7)',
+          'rgba(255, 218, 185, 0.7)',
+          'rgba(221, 160, 221, 0.7)',
         ],
         borderColor: [
           'rgb(230, 230, 250)',
@@ -123,7 +123,7 @@ export default function ReportsPage() {
     datasets: [
       {
         label: 'Total Points by Category',
-        data: [336, 464, 140, 280, 110],
+        data: [0, 0, 0, 0, 0],
         backgroundColor: [
           'rgba(230, 230, 250, 0.7)',
           'rgba(173, 216, 230, 0.7)',
@@ -148,7 +148,7 @@ export default function ReportsPage() {
     labels: ['Low', 'Medium', 'High', 'Urgent'],
     datasets: [
       {
-        data: [45, 85, 55, 15],
+        data: [0, 0, 0, 0],
         backgroundColor: [
           'rgba(135, 206, 250, 0.7)',
           'rgba(255, 218, 185, 0.7)',
@@ -172,14 +172,14 @@ export default function ReportsPage() {
     datasets: [
       {
         label: 'Current Period',
-        data: [92, 88, 95, 85, 90, 90],
+        data: [0, 0, 0, 0, 0, 0],
         backgroundColor: 'rgba(168, 135, 255, 0.2)',
         borderColor: 'rgb(168, 135, 255)',
         borderWidth: 2,
       },
       {
         label: 'Previous Period',
-        data: [85, 82, 88, 80, 82, 85],
+        data: [0, 0, 0, 0, 0, 0],
         backgroundColor: 'rgba(135, 206, 250, 0.2)',
         borderColor: 'rgb(135, 206, 250)',
         borderWidth: 2,
@@ -214,17 +214,17 @@ export default function ReportsPage() {
       reportType,
       categoryFilter,
       metrics: {
-        totalTasks: 200,
-        completedTasks: 185,
-        totalPoints: 1330,
-        activeUsers: 48,
-        avgCompletionTime: '4.2h',
+        totalTasks: 0,
+        completedTasks: 0,
+        totalPoints: 0,
+        activeUsers: 0,
+        avgCompletionTime: '0h',
         categories: {
-          UAT: { tasks: 42, points: 336 },
-          Datafix: { tasks: 58, points: 464 },
-          Training: { tasks: 28, points: 140 },
-          'Task Force': { tasks: 35, points: 280 },
-          Other: { tasks: 22, points: 110 },
+          UAT: { tasks: 0, points: 0 },
+          Datafix: { tasks: 0, points: 0 },
+          Training: { tasks: 0, points: 0 },
+          'Task Force': { tasks: 0, points: 0 },
+          Other: { tasks: 0, points: 0 },
         },
       },
       timestamp: new Date().toISOString(),
@@ -232,7 +232,7 @@ export default function ReportsPage() {
 
     const dataStr = format === 'json' 
       ? JSON.stringify(reportData, null, 2)
-      : `Report Generated: ${new Date().toLocaleString()}\nDate Range: ${dateRange}\nReport Type: ${reportType}\nCategory Filter: ${categoryFilter}\n\nMetrics:\n- Total Tasks: 200\n- Completed: 185\n- Total Points: 1330\n- Active Users: 48\n- Avg Time: 4.2h\n\nCategory Breakdown:\n- UAT: 42 tasks, 336 points\n- Datafix: 58 tasks, 464 points\n- Training: 28 tasks, 140 points\n- Task Force: 35 tasks, 280 points\n- Other: 22 tasks, 110 points`;
+      : `Report Generated: ${new Date().toLocaleString()}\nDate Range: ${dateRange}\nReport Type: ${reportType}\nCategory Filter: ${categoryFilter}\n\nMetrics:\n- Total Tasks: 0\n- Completed: 0\n- Total Points: 0\n- Active Users: 0\n- Avg Time: 0h\n\nCategory Breakdown:\n- UAT: 0 tasks, 0 points\n- Datafix: 0 tasks, 0 points\n- Training: 0 tasks, 0 points\n- Task Force: 0 tasks, 0 points\n- Other: 0 tasks, 0 points`;
 
     const blob = new Blob([dataStr], { type: format === 'json' ? 'application/json' : 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -331,33 +331,33 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <MetricCard
               title="Total Tasks"
-              value={200}
+              value={0}
               icon={CheckCircle2}
-              change="+15% vs last period"
+              change="No data yet"
               changeType="positive"
               gradient={1}
             />
             <MetricCard
               title="Total Points"
-              value="1,330"
+              value="0"
               icon={TrendingUp}
-              change="+18.5% improvement"
+              change="No data yet"
               changeType="positive"
               gradient={2}
             />
             <MetricCard
               title="Team Members"
-              value={48}
+              value={0}
               icon={Users}
-              change="+6 new members"
+              change="No data yet"
               changeType="positive"
               gradient={3}
             />
             <MetricCard
               title="Avg Points/Task"
-              value="6.7"
+              value="0"
               icon={Clock}
-              change="+0.8 increase"
+              change="No data yet"
               changeType="positive"
               gradient={4}
             />
@@ -437,50 +437,50 @@ export default function ReportsPage() {
                       <div className="w-4 h-4 rounded" style={{ backgroundColor: '#E6E6FA' }} />
                       UAT
                     </td>
-                    <td className="text-right py-3 px-4 font-medium">42</td>
-                    <td className="text-right py-3 px-4 font-medium">336</td>
-                    <td className="text-right py-3 px-4 text-muted-foreground">8.0</td>
-                    <td className="text-right py-3 px-4 text-green-600 dark:text-green-400">92%</td>
+                    <td className="text-right py-3 px-4 font-medium">0</td>
+                    <td className="text-right py-3 px-4 font-medium">0</td>
+                    <td className="text-right py-3 px-4 text-muted-foreground">0</td>
+                    <td className="text-right py-3 px-4 text-green-600 dark:text-green-400">0%</td>
                   </tr>
                   <tr className="border-b border-border hover:bg-accent/20">
                     <td className="py-3 px-4 flex items-center gap-2">
                       <div className="w-4 h-4 rounded" style={{ backgroundColor: '#ADD8E6' }} />
                       Datafix
                     </td>
-                    <td className="text-right py-3 px-4 font-medium">58</td>
-                    <td className="text-right py-3 px-4 font-medium">464</td>
-                    <td className="text-right py-3 px-4 text-muted-foreground">8.0</td>
-                    <td className="text-right py-3 px-4 text-green-600 dark:text-green-400">89%</td>
+                    <td className="text-right py-3 px-4 font-medium">0</td>
+                    <td className="text-right py-3 px-4 font-medium">0</td>
+                    <td className="text-right py-3 px-4 text-muted-foreground">0</td>
+                    <td className="text-right py-3 px-4 text-green-600 dark:text-green-400">0%</td>
                   </tr>
                   <tr className="border-b border-border hover:bg-accent/20">
                     <td className="py-3 px-4 flex items-center gap-2">
                       <div className="w-4 h-4 rounded" style={{ backgroundColor: '#FFB6C1' }} />
                       Training
                     </td>
-                    <td className="text-right py-3 px-4 font-medium">28</td>
-                    <td className="text-right py-3 px-4 font-medium">140</td>
-                    <td className="text-right py-3 px-4 text-muted-foreground">5.0</td>
-                    <td className="text-right py-3 px-4 text-green-600 dark:text-green-400">85%</td>
+                    <td className="text-right py-3 px-4 font-medium">0</td>
+                    <td className="text-right py-3 px-4 font-medium">0</td>
+                    <td className="text-right py-3 px-4 text-muted-foreground">0</td>
+                    <td className="text-right py-3 px-4 text-green-600 dark:text-green-400">0%</td>
                   </tr>
                   <tr className="border-b border-border hover:bg-accent/20">
                     <td className="py-3 px-4 flex items-center gap-2">
                       <div className="w-4 h-4 rounded" style={{ backgroundColor: '#FFDAB9' }} />
                       Task Force
                     </td>
-                    <td className="text-right py-3 px-4 font-medium">35</td>
-                    <td className="text-right py-3 px-4 font-medium">280</td>
-                    <td className="text-right py-3 px-4 text-muted-foreground">8.0</td>
-                    <td className="text-right py-3 px-4 text-green-600 dark:text-green-400">88%</td>
+                    <td className="text-right py-3 px-4 font-medium">0</td>
+                    <td className="text-right py-3 px-4 font-medium">0</td>
+                    <td className="text-right py-3 px-4 text-muted-foreground">0</td>
+                    <td className="text-right py-3 px-4 text-green-600 dark:text-green-400">0%</td>
                   </tr>
                   <tr className="hover:bg-accent/20">
                     <td className="py-3 px-4 flex items-center gap-2">
                       <div className="w-4 h-4 rounded" style={{ backgroundColor: '#DDA0DD' }} />
                       Other
                     </td>
-                    <td className="text-right py-3 px-4 font-medium">22</td>
-                    <td className="text-right py-3 px-4 font-medium">110</td>
-                    <td className="text-right py-3 px-4 text-muted-foreground">5.0</td>
-                    <td className="text-right py-3 px-4 text-green-600 dark:text-green-400">86%</td>
+                    <td className="text-right py-3 px-4 font-medium">0</td>
+                    <td className="text-right py-3 px-4 font-medium">0</td>
+                    <td className="text-right py-3 px-4 text-muted-foreground">0</td>
+                    <td className="text-right py-3 px-4 text-green-600 dark:text-green-400">0%</td>
                   </tr>
                 </tbody>
               </table>
@@ -490,21 +490,21 @@ export default function ReportsPage() {
           {/* Insights */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <GlassCard gradient={1}>
-              <h3 className="text-lg font-semibold mb-2">🎯 Top Performing Category</h3>
+              <h3 className="text-lg font-semibold mb-2">🎯 Start Tracking</h3>
               <p className="text-sm text-muted-foreground">
-                UAT category has the highest completion rate at 92% with an average of 8 points per task. Excellent quality and consistency!
+                Begin adding tasks with categories and points to see performance insights and category analytics here.
               </p>
             </GlassCard>
             <GlassCard gradient={2}>
-              <h3 className="text-lg font-semibold mb-2">📈 Top Assignees</h3>
+              <h3 className="text-lg font-semibold mb-2">📈 Points System</h3>
               <p className="text-sm text-muted-foreground">
-                All assignees receive full points for completed tasks with multiple assignees. Rankings show total accumulated points across all tasks.
+                All assignees receive full points for completed tasks with multiple assignees. Rankings show total accumulated points.
               </p>
             </GlassCard>
             <GlassCard gradient={3}>
-              <h3 className="text-lg font-semibold mb-2">✨ Achievement</h3>
+              <h3 className="text-lg font-semibold mb-2">✨ Real-Time Data</h3>
               <p className="text-sm text-muted-foreground">
-                Total points completed increased by 18.5% this period. The team is consistently delivering high-value work!
+                Your charts and analytics will automatically update as you create and complete tasks in the system.
               </p>
             </GlassCard>
           </div>

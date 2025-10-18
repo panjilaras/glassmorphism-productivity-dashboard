@@ -33,33 +33,33 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <MetricCard
               title="Total Tasks"
-              value={200}
+              value={0}
               icon={CheckSquare}
-              change="+12% from last week"
+              change="No data yet"
               changeType="positive"
               gradient={1}
             />
             <MetricCard
               title="Active Users"
-              value={48}
+              value={0}
               icon={Users}
-              change="+3 new members"
+              change="No data yet"
               changeType="positive"
               gradient={2}
             />
             <MetricCard
               title="Completion Rate"
-              value="87%"
+              value="0%"
               icon={TrendingUp}
-              change="+5% improvement"
+              change="No data yet"
               changeType="positive"
               gradient={3}
             />
             <MetricCard
               title="Avg. Time/Task"
-              value="4.2h"
+              value="0h"
               icon={Clock}
-              change="-0.5h faster"
+              change="No data yet"
               changeType="positive"
               gradient={4}
             />

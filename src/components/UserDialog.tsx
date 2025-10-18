@@ -12,7 +12,7 @@ export interface User {
   name: string;
   email: string;
   role: 'admin' | 'manager' | 'member' | 'viewer';
-  department: string;
+  position: string;
   status: 'active' | 'inactive';
   joinDate: string;
 }
@@ -29,7 +29,7 @@ export function UserDialog({ open, onOpenChange, user, onSave }: UserDialogProps
     name: '',
     email: '',
     role: 'member',
-    department: '',
+    position: '',
     status: 'active',
     joinDate: '',
   });
@@ -40,7 +40,7 @@ export function UserDialog({ open, onOpenChange, user, onSave }: UserDialogProps
         name: user.name,
         email: user.email,
         role: user.role,
-        department: user.department,
+        position: user.position,
         status: user.status,
         joinDate: user.joinDate,
       });
@@ -49,7 +49,7 @@ export function UserDialog({ open, onOpenChange, user, onSave }: UserDialogProps
         name: '',
         email: '',
         role: 'member',
-        department: '',
+        position: '',
         status: 'active',
         joinDate: new Date().toISOString().split('T')[0],
       });
@@ -131,11 +131,11 @@ export function UserDialog({ open, onOpenChange, user, onSave }: UserDialogProps
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="department">Department</Label>
+            <Label htmlFor="position">Position</Label>
             <Input
-              id="department"
-              value={formData.department}
-              onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+              id="position"
+              value={formData.position}
+              onChange={(e) => setFormData({ ...formData, position: e.target.value })}
               required
               className="glass-card"
               placeholder="Engineering"

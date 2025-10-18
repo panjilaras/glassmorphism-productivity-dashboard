@@ -32,11 +32,11 @@ interface Category {
 }
 
 const initialCategories: Category[] = [
-  { id: 1, name: 'UAT', color: '#E6E6FA', taskCount: 12 },
-  { id: 2, name: 'Datafix', color: '#ADD8E6', taskCount: 18 },
-  { id: 3, name: 'Training', color: '#FFB6C1', taskCount: 8 },
-  { id: 4, name: 'Task Force', color: '#FFDAB9', taskCount: 15 },
-  { id: 5, name: 'Other', color: '#DDA0DD', taskCount: 7 },
+  { id: 1, name: 'UAT', color: '#E6E6FA', taskCount: 0 },
+  { id: 2, name: 'Datafix', color: '#ADD8E6', taskCount: 0 },
+  { id: 3, name: 'Training', color: '#FFB6C1', taskCount: 0 },
+  { id: 4, name: 'Task Force', color: '#FFDAB9', taskCount: 0 },
+  { id: 5, name: 'Other', color: '#DDA0DD', taskCount: 0 },
 ];
 
 const colorPresets = [
