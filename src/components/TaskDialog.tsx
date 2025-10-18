@@ -25,17 +25,9 @@ const categories = [
   { id: 5, name: 'Other', color: '#DDA0DD' },
 ];
 
-const activeUsers = [
-  { id: 1, name: 'Sarah Johnson' },
-  { id: 2, name: 'Mike Chen' },
-  { id: 3, name: 'Emma Davis' },
-  { id: 4, name: 'David Kim' },
-  { id: 5, name: 'Lisa Wang' },
-  { id: 6, name: 'Alex Turner' },
-  { id: 7, name: 'John Doe' },
-];
-
 export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps) {
+  const [activeUsers, setActiveUsers] = React.useState<Array<{ id: number; name: string }>>([]);
+  const [loading, setLoading] = React.useState(true);
   const [formData, setFormData] = React.useState<Omit<Task, 'id'>>({
     title: '',
     description: '',
@@ -46,6 +38,28 @@ export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps
     category: '',
     points: 0,
   });
+
+  // Fetch users from API
+  React.useEffect(() => {
+    async function fetchUsers() {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/users');
+        const data = await response.json();
+        if (data.success && Array.isArray(data.data)) {
+          setActiveUsers(data.data.filter((u: any) => u.status === 'active').map((u: any) => ({ id: u.id, name: u.name })));
+        }
+      } catch (error) {
+        console.error('Failed to fetch users:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    if (open) {
+      fetchUsers();
+    }
+  }, [open]);
 
   React.useEffect(() => {
     if (task) {
@@ -199,21 +213,27 @@ export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps
           <div className="space-y-2">
             <Label>Assignees (Select Multiple)</Label>
             <div className="glass-card p-4 rounded-xl max-h-48 overflow-y-auto space-y-3">
-              {activeUsers.map((user) => (
-                <div key={user.id} className="flex items-center gap-3">
-                  <Checkbox
-                    id={`user-${user.id}`}
-                    checked={formData.assignees.includes(user.name)}
-                    onCheckedChange={() => handleAssigneeToggle(user.name)}
-                  />
-                  <Label
-                    htmlFor={`user-${user.id}`}
-                    className="flex-1 cursor-pointer"
-                  >
-                    {user.name}
-                  </Label>
-                </div>
-              ))}
+              {loading ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Loading users...</p>
+              ) : activeUsers.length > 0 ? (
+                activeUsers.map((user) => (
+                  <div key={user.id} className="flex items-center gap-3">
+                    <Checkbox
+                      id={`user-${user.id}`}
+                      checked={formData.assignees.includes(user.name)}
+                      onCheckedChange={() => handleAssigneeToggle(user.name)}
+                    />
+                    <Label
+                      htmlFor={`user-${user.id}`}
+                      className="flex-1 cursor-pointer"
+                    >
+                      {user.name}
+                    </Label>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">No active users found</p>
+              )}
             </div>
           </div>
 

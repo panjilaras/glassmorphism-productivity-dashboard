@@ -9,52 +9,39 @@ import { Input } from '@/components/ui/input';
 import { Plus, Search, Filter } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GlassCard } from '@/components/ui/GlassCard';
-
-const initialTasks: Task[] = [
-  {
-    id: 1,
-    title: 'Update landing page design',
-    description: 'Redesign the landing page with new brand colors and improve user experience',
-    status: 'in-progress',
-    priority: 'high',
-    assignees: ['Sarah Johnson', 'Mike Chen'],
-    dueDate: '2024-01-20',
-    category: 'UAT',
-    points: 8,
-  },
-  {
-    id: 2,
-    title: 'Fix production bug',
-    description: 'Critical bug affecting user authentication flow needs immediate attention',
-    status: 'completed',
-    priority: 'urgent',
-    assignees: ['Emma Davis', 'David Kim'],
-    dueDate: '2024-01-18',
-    category: 'Datafix',
-    points: 13,
-  },
-  {
-    id: 3,
-    title: 'Database optimization',
-    description: 'Optimize database queries for better performance on large datasets',
-    status: 'completed',
-    priority: 'high',
-    assignees: ['David Kim'],
-    dueDate: '2024-01-15',
-    category: 'Task Force',
-    points: 8,
-  },
-];
+import { toast } from 'sonner';
 
 export default function TasksPage() {
-  const [tasks, setTasks] = React.useState<Task[]>(initialTasks);
-  const [filteredTasks, setFilteredTasks] = React.useState<Task[]>(initialTasks);
+  const [tasks, setTasks] = React.useState<Task[]>([]);
+  const [filteredTasks, setFilteredTasks] = React.useState<Task[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<string>('all');
   const [priorityFilter, setPriorityFilter] = React.useState<string>('all');
   const [categoryFilter, setCategoryFilter] = React.useState<string>('all');
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingTask, setEditingTask] = React.useState<Task | null>(null);
+
+  // Fetch tasks from API
+  const fetchTasks = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/tasks');
+      const data = await response.json();
+      if (data.success && Array.isArray(data.data)) {
+        setTasks(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch tasks:', error);
+      toast.error('Failed to load tasks');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
 
   React.useEffect(() => {
     let filtered = tasks;
@@ -81,25 +68,83 @@ export default function TasksPage() {
     setFilteredTasks(filtered);
   }, [searchQuery, statusFilter, priorityFilter, categoryFilter, tasks]);
 
-  const handleSaveTask = (taskData: Omit<Task, 'id'> & { id?: number }) => {
-    if (taskData.id) {
-      setTasks(tasks.map(t => t.id === taskData.id ? taskData as Task : t));
-    } else {
-      const newTask = {
-        ...taskData,
-        id: Math.max(...tasks.map(t => t.id)) + 1,
-      } as Task;
-      setTasks([...tasks, newTask]);
+  const handleSaveTask = async (taskData: Omit<Task, 'id'> & { id?: number }) => {
+    try {
+      if (taskData.id) {
+        // Update existing task
+        const response = await fetch(`/api/tasks/${taskData.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(taskData),
+        });
+        const data = await response.json();
+        if (data.success) {
+          toast.success('Task updated successfully');
+          fetchTasks(); // Refresh tasks
+        } else {
+          toast.error('Failed to update task');
+        }
+      } else {
+        // Create new task
+        const response = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(taskData),
+        });
+        const data = await response.json();
+        if (data.success) {
+          toast.success('Task created successfully');
+          fetchTasks(); // Refresh tasks
+        } else {
+          toast.error('Failed to create task');
+        }
+      }
+      setEditingTask(null);
+    } catch (error) {
+      console.error('Failed to save task:', error);
+      toast.error('Failed to save task');
     }
-    setEditingTask(null);
   };
 
-  const handleDeleteTask = (id: number) => {
-    setTasks(tasks.filter(t => t.id !== id));
+  const handleDeleteTask = async (id: number) => {
+    try {
+      const response = await fetch(`/api/tasks/${id}`, {
+        method: 'DELETE',
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Task deleted successfully');
+        fetchTasks(); // Refresh tasks
+      } else {
+        toast.error('Failed to delete task');
+      }
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+      toast.error('Failed to delete task');
+    }
   };
 
-  const handleStatusChange = (id: number, status: Task['status']) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, status } : t));
+  const handleStatusChange = async (id: number, status: Task['status']) => {
+    try {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+
+      const response = await fetch(`/api/tasks/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...task, status }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Task status updated');
+        fetchTasks(); // Refresh tasks
+      } else {
+        toast.error('Failed to update status');
+      }
+    } catch (error) {
+      console.error('Failed to update task status:', error);
+      toast.error('Failed to update status');
+    }
   };
 
   const handleEditTask = (task: Task) => {
@@ -111,6 +156,19 @@ export default function TasksPage() {
     setEditingTask(null);
     setDialogOpen(true);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen">
+        <Navigation />
+        <main className="lg:ml-72 p-4 lg:p-8">
+          <div className="max-w-7xl mx-auto">
+            <p className="text-center text-muted-foreground py-12">Loading tasks...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">

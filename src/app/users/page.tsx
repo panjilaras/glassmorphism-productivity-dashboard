@@ -23,36 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Plus, Search, MoreVertical, Edit, Trash2, Shield, UserCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const initialUsers: User[] = [
-  {
-    id: 1,
-    name: 'John Doe',
-    email: 'john@example.com',
-    role: 'admin',
-    position: 'Senior Engineer',
-    status: 'active',
-    joinDate: '2023-01-15',
-  },
-  {
-    id: 2,
-    name: 'Sarah Johnson',
-    email: 'sarah@example.com',
-    role: 'manager',
-    position: 'Design Lead',
-    status: 'active',
-    joinDate: '2023-03-20',
-  },
-  {
-    id: 3,
-    name: 'Mike Chen',
-    email: 'mike@example.com',
-    role: 'member',
-    position: 'Full Stack Developer',
-    status: 'active',
-    joinDate: '2023-05-10',
-  },
-];
+import { toast } from 'sonner';
 
 const roleConfig = {
   admin: { label: 'Admin', color: 'bg-purple-500/20 text-purple-700 dark:text-purple-400', icon: Shield },
@@ -62,11 +33,33 @@ const roleConfig = {
 };
 
 export default function UsersPage() {
-  const [users, setUsers] = React.useState<User[]>(initialUsers);
-  const [filteredUsers, setFilteredUsers] = React.useState<User[]>(initialUsers);
+  const [users, setUsers] = React.useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = React.useState<User[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingUser, setEditingUser] = React.useState<User | null>(null);
+
+  // Fetch users from API
+  const fetchUsers = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/users');
+      const data = await response.json();
+      if (data.success && Array.isArray(data.data)) {
+        setUsers(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+      toast.error('Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   React.useEffect(() => {
     if (searchQuery) {
@@ -81,21 +74,60 @@ export default function UsersPage() {
     }
   }, [searchQuery, users]);
 
-  const handleSaveUser = (userData: Omit<User, 'id'> & { id?: number }) => {
-    if (userData.id) {
-      setUsers(users.map(u => u.id === userData.id ? userData as User : u));
-    } else {
-      const newUser = {
-        ...userData,
-        id: Math.max(...users.map(u => u.id)) + 1,
-      } as User;
-      setUsers([...users, newUser]);
+  const handleSaveUser = async (userData: Omit<User, 'id'> & { id?: number }) => {
+    try {
+      if (userData.id) {
+        // Update existing user
+        const response = await fetch(`/api/users/${userData.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(userData),
+        });
+        const data = await response.json();
+        if (data.success) {
+          toast.success('User updated successfully');
+          fetchUsers(); // Refresh users
+        } else {
+          toast.error('Failed to update user');
+        }
+      } else {
+        // Create new user
+        const response = await fetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(userData),
+        });
+        const data = await response.json();
+        if (data.success) {
+          toast.success('User created successfully');
+          fetchUsers(); // Refresh users
+        } else {
+          toast.error('Failed to create user');
+        }
+      }
+      setEditingUser(null);
+    } catch (error) {
+      console.error('Failed to save user:', error);
+      toast.error('Failed to save user');
     }
-    setEditingUser(null);
   };
 
-  const handleDeleteUser = (id: number) => {
-    setUsers(users.filter(u => u.id !== id));
+  const handleDeleteUser = async (id: number) => {
+    try {
+      const response = await fetch(`/api/users/${id}`, {
+        method: 'DELETE',
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success('User deleted successfully');
+        fetchUsers(); // Refresh users
+      } else {
+        toast.error('Failed to delete user');
+      }
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      toast.error('Failed to delete user');
+    }
   };
 
   const handleEditUser = (user: User) => {
@@ -107,6 +139,19 @@ export default function UsersPage() {
     setEditingUser(null);
     setDialogOpen(true);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen">
+        <Navigation />
+        <main className="lg:ml-72 p-4 lg:p-8">
+          <div className="max-w-7xl mx-auto">
+            <p className="text-center text-muted-foreground py-12">Loading users...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
