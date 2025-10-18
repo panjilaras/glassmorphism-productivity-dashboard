@@ -22,22 +22,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Search, MoreVertical, Edit, Trash2, Tag } from 'lucide-react';
+import { Plus, Search, MoreVertical, Edit, Trash2, Tag, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Category {
   id: number;
   name: string;
   color: string;
-  taskCount?: number;
+  task_count?: number;
 }
-
-const initialCategories: Category[] = [
-  { id: 1, name: 'UAT', color: '#E6E6FA', taskCount: 0 },
-  { id: 2, name: 'Datafix', color: '#ADD8E6', taskCount: 0 },
-  { id: 3, name: 'Training', color: '#FFB6C1', taskCount: 0 },
-  { id: 4, name: 'Task Force', color: '#FFDAB9', taskCount: 0 },
-  { id: 5, name: 'Other', color: '#DDA0DD', taskCount: 0 },
-];
 
 const colorPresets = [
   '#E6E6FA', '#ADD8E6', '#FFB6C1', '#FFDAB9', '#DDA0DD',
@@ -45,12 +38,34 @@ const colorPresets = [
 ];
 
 export default function CategoriesPage() {
-  const [categories, setCategories] = React.useState<Category[]>(initialCategories);
-  const [filteredCategories, setFilteredCategories] = React.useState<Category[]>(initialCategories);
+  const [categories, setCategories] = React.useState<Category[]>([]);
+  const [filteredCategories, setFilteredCategories] = React.useState<Category[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingCategory, setEditingCategory] = React.useState<Category | null>(null);
   const [formData, setFormData] = React.useState({ name: '', color: '#E6E6FA' });
+
+  // Fetch categories from API
+  const fetchCategories = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/task-categories');
+      const data = await response.json();
+      if (data.success && Array.isArray(data.data)) {
+        setCategories(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+      toast.error('Failed to load categories');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   React.useEffect(() => {
     if (searchQuery) {
@@ -71,29 +86,62 @@ export default function CategoriesPage() {
     }
   }, [editingCategory, dialogOpen]);
 
-  const handleSaveCategory = (e: React.FormEvent) => {
+  const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingCategory) {
-      setCategories(categories.map(c => 
-        c.id === editingCategory.id 
-          ? { ...c, name: formData.name, color: formData.color }
-          : c
-      ));
-    } else {
-      const newCategory: Category = {
-        id: Math.max(...categories.map(c => c.id)) + 1,
-        name: formData.name,
-        color: formData.color,
-        taskCount: 0,
-      };
-      setCategories([...categories, newCategory]);
+    try {
+      if (editingCategory) {
+        // Update existing category
+        const response = await fetch(`/api/task-categories/${editingCategory.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+        const data = await response.json();
+        if (data.success) {
+          toast.success('Category updated successfully');
+          fetchCategories();
+        } else {
+          toast.error('Failed to update category');
+        }
+      } else {
+        // Create new category
+        const response = await fetch('/api/task-categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+        const data = await response.json();
+        if (data.success) {
+          toast.success('Category created successfully');
+          fetchCategories();
+        } else {
+          toast.error('Failed to create category');
+        }
+      }
+      setDialogOpen(false);
+      setEditingCategory(null);
+    } catch (error) {
+      console.error('Failed to save category:', error);
+      toast.error('Failed to save category');
     }
-    setDialogOpen(false);
-    setEditingCategory(null);
   };
 
-  const handleDeleteCategory = (id: number) => {
-    setCategories(categories.filter(c => c.id !== id));
+  const handleDeleteCategory = async (id: number) => {
+    try {
+      const response = await fetch(`/api/task-categories/${id}`, {
+        method: 'DELETE',
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Category deleted successfully');
+        fetchCategories();
+      } else {
+        toast.error('Failed to delete category');
+      }
+    } catch (error) {
+      console.error('Failed to delete category:', error);
+      toast.error('Failed to delete category');
+    }
   };
 
   const handleEditCategory = (category: Category) => {
@@ -105,6 +153,21 @@ export default function CategoriesPage() {
     setEditingCategory(null);
     setDialogOpen(true);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen">
+        <Navigation />
+        <main className="lg:ml-72 p-4 lg:p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
@@ -132,13 +195,13 @@ export default function CategoriesPage() {
             </GlassCard>
             <GlassCard className="text-center" gradient={2}>
               <p className="text-2xl font-bold text-blue-500">
-                {categories.reduce((sum, cat) => sum + (cat.taskCount || 0), 0)}
+                {categories.reduce((sum, cat) => sum + (cat.task_count || 0), 0)}
               </p>
               <p className="text-sm text-muted-foreground">Total Tasks</p>
             </GlassCard>
             <GlassCard className="text-center" gradient={3}>
               <p className="text-2xl font-bold text-purple-500">
-                {Math.round(categories.reduce((sum, cat) => sum + (cat.taskCount || 0), 0) / categories.length)}
+                {categories.length > 0 ? Math.round(categories.reduce((sum, cat) => sum + (cat.task_count || 0), 0) / categories.length) : 0}
               </p>
               <p className="text-sm text-muted-foreground">Avg Tasks/Category</p>
             </GlassCard>
@@ -195,7 +258,7 @@ export default function CategoriesPage() {
                       </TableCell>
                       <TableCell>
                         <Badge className="bg-primary/20 text-primary">
-                          {category.taskCount || 0} tasks
+                          {category.task_count || 0} tasks
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
