@@ -73,6 +73,7 @@ export function TaskCard({ task, onEdit, onDelete, onStatusChange }: TaskCardPro
   };
 
   const nextStatus = getNextStatus();
+  const assignees = task.assignees || [];
 
   return (
     <GlassCard className="p-6 glass-hover">
@@ -130,10 +131,10 @@ export function TaskCard({ task, onEdit, onDelete, onStatusChange }: TaskCardPro
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <User className="w-4 h-4" />
           <span>
-            {task.assignees.length > 0 
-              ? task.assignees.length === 1
-                ? task.assignees[0]
-                : `${task.assignees[0]} +${task.assignees.length - 1} more`
+            {assignees.length > 0 
+              ? assignees.length === 1
+                ? assignees[0]
+                : `${assignees[0]} +${assignees.length - 1} more`
               : 'Unassigned'}
           </span>
         </div>
