@@ -46,8 +46,9 @@ export default function UsersPage() {
       setLoading(true);
       const response = await fetch('/api/users');
       const data = await response.json();
-      if (data.success && Array.isArray(data.data)) {
-        setUsers(data.data);
+      // API returns plain array, not wrapped in { success, data }
+      if (Array.isArray(data)) {
+        setUsers(data);
       }
     } catch (error) {
       console.error('Failed to fetch users:', error);
@@ -66,7 +67,7 @@ export default function UsersPage() {
       const filtered = users.filter(user =>
         user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.position.toLowerCase().includes(searchQuery.toLowerCase())
+        (user.position && user.position.toLowerCase().includes(searchQuery.toLowerCase()))
       );
       setFilteredUsers(filtered);
     } else {
@@ -84,9 +85,9 @@ export default function UsersPage() {
           body: JSON.stringify(userData),
         });
         const data = await response.json();
-        if (data.success) {
+        if (response.ok) {
           toast.success('User updated successfully');
-          fetchUsers(); // Refresh users
+          fetchUsers();
         } else {
           toast.error('Failed to update user');
         }
@@ -98,9 +99,9 @@ export default function UsersPage() {
           body: JSON.stringify(userData),
         });
         const data = await response.json();
-        if (data.success) {
+        if (response.ok) {
           toast.success('User created successfully');
-          fetchUsers(); // Refresh users
+          fetchUsers();
         } else {
           toast.error('Failed to create user');
         }
@@ -118,9 +119,9 @@ export default function UsersPage() {
         method: 'DELETE',
       });
       const data = await response.json();
-      if (data.success) {
+      if (response.ok) {
         toast.success('User deleted successfully');
-        fetchUsers(); // Refresh users
+        fetchUsers();
       } else {
         toast.error('Failed to delete user');
       }
@@ -212,7 +213,6 @@ export default function UsersPage() {
                   <TableRow className="border-border hover:bg-transparent">
                     <TableHead>User</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
                     <TableHead>Position</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Join Date</TableHead>
@@ -221,7 +221,6 @@ export default function UsersPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredUsers.map((user) => {
-                    const RoleIcon = roleConfig[user.role].icon;
                     return (
                       <TableRow key={user.id} className="border-border hover:bg-accent/20">
                         <TableCell>
@@ -233,13 +232,7 @@ export default function UsersPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                        <TableCell>
-                          <Badge className={cn('font-medium', roleConfig[user.role].color)}>
-                            <RoleIcon className="w-3 h-3 mr-1" />
-                            {roleConfig[user.role].label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{user.position}</TableCell>
+                        <TableCell>{user.position || '-'}</TableCell>
                         <TableCell>
                           <Badge
                             className={cn(
@@ -253,7 +246,7 @@ export default function UsersPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {new Date(user.joinDate).toLocaleDateString()}
+                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}
                         </TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>

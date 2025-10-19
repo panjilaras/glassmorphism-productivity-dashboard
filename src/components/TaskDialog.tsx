@@ -45,8 +45,9 @@ export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps
         const usersData = await usersRes.json();
         const categoriesData = await categoriesRes.json();
         
-        if (usersData.success && Array.isArray(usersData.data)) {
-          setActiveUsers(usersData.data.filter((u: any) => u.status === 'active').map((u: any) => ({ id: u.id, name: u.name })));
+        // API returns plain arrays, not wrapped in { success, data }
+        if (Array.isArray(usersData)) {
+          setActiveUsers(usersData.filter((u: any) => u.status === 'active').map((u: any) => ({ id: u.id, name: u.name })));
         }
         
         if (Array.isArray(categoriesData)) {
