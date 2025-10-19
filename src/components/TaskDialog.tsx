@@ -38,20 +38,20 @@ export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps
       try {
         setLoading(true);
         const [usersRes, categoriesRes] = await Promise.all([
-          fetch('/api/users'),
-          fetch('/api/task-categories')
+          fetch('/api/users?limit=100'),
+          fetch('/api/task-categories?limit=100')
         ]);
         
         const usersData = await usersRes.json();
         const categoriesData = await categoriesRes.json();
         
-        // API returns plain arrays, not wrapped in { success, data }
+        // API returns plain arrays
         if (Array.isArray(usersData)) {
           setActiveUsers(usersData.filter((u: any) => u.status === 'active').map((u: any) => ({ id: u.id, name: u.name })));
         }
         
         if (Array.isArray(categoriesData)) {
-          setCategories(categoriesData);
+          setCategories(categoriesData.map((c: any) => ({ id: c.id, name: c.name, color: c.color || '#E6E6FA' })));
         }
       } catch (error) {
         console.error('Failed to fetch data:', error);

@@ -79,7 +79,7 @@ export default function UsersPage() {
     try {
       if (userData.id) {
         // Update existing user
-        const response = await fetch(`/api/users/${userData.id}`, {
+        const response = await fetch(`/api/users?id=${userData.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(userData),
@@ -89,7 +89,7 @@ export default function UsersPage() {
           toast.success('User updated successfully');
           fetchUsers();
         } else {
-          toast.error('Failed to update user');
+          toast.error(data.error || 'Failed to update user');
         }
       } else {
         // Create new user
@@ -103,7 +103,7 @@ export default function UsersPage() {
           toast.success('User created successfully');
           fetchUsers();
         } else {
-          toast.error('Failed to create user');
+          toast.error(data.error || 'Failed to create user');
         }
       }
       setEditingUser(null);
@@ -115,7 +115,7 @@ export default function UsersPage() {
 
   const handleDeleteUser = async (id: number) => {
     try {
-      const response = await fetch(`/api/users/${id}`, {
+      const response = await fetch(`/api/users?id=${id}`, {
         method: 'DELETE',
       });
       const data = await response.json();
@@ -123,7 +123,7 @@ export default function UsersPage() {
         toast.success('User deleted successfully');
         fetchUsers();
       } else {
-        toast.error('Failed to delete user');
+        toast.error(data.error || 'Failed to delete user');
       }
     } catch (error) {
       console.error('Failed to delete user:', error);

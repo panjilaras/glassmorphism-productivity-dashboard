@@ -52,8 +52,9 @@ export default function CategoriesPage() {
       setLoading(true);
       const response = await fetch('/api/task-categories');
       const data = await response.json();
-      if (data.success && Array.isArray(data.data)) {
-        setCategories(data.data);
+      // API returns plain array
+      if (Array.isArray(data)) {
+        setCategories(data);
       }
     } catch (error) {
       console.error('Failed to fetch categories:', error);
@@ -91,17 +92,17 @@ export default function CategoriesPage() {
     try {
       if (editingCategory) {
         // Update existing category
-        const response = await fetch(`/api/task-categories/${editingCategory.id}`, {
+        const response = await fetch(`/api/task-categories?id=${editingCategory.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData),
         });
         const data = await response.json();
-        if (data.success) {
+        if (response.ok) {
           toast.success('Category updated successfully');
           fetchCategories();
         } else {
-          toast.error('Failed to update category');
+          toast.error(data.error || 'Failed to update category');
         }
       } else {
         // Create new category
@@ -111,11 +112,11 @@ export default function CategoriesPage() {
           body: JSON.stringify(formData),
         });
         const data = await response.json();
-        if (data.success) {
+        if (response.ok) {
           toast.success('Category created successfully');
           fetchCategories();
         } else {
-          toast.error('Failed to create category');
+          toast.error(data.error || 'Failed to create category');
         }
       }
       setDialogOpen(false);
@@ -128,15 +129,15 @@ export default function CategoriesPage() {
 
   const handleDeleteCategory = async (id: number) => {
     try {
-      const response = await fetch(`/api/task-categories/${id}`, {
+      const response = await fetch(`/api/task-categories?id=${id}`, {
         method: 'DELETE',
       });
       const data = await response.json();
-      if (data.success) {
+      if (response.ok) {
         toast.success('Category deleted successfully');
         fetchCategories();
       } else {
-        toast.error('Failed to delete category');
+        toast.error(data.error || 'Failed to delete category');
       }
     } catch (error) {
       console.error('Failed to delete category:', error);

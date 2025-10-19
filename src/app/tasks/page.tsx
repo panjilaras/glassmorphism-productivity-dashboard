@@ -35,8 +35,9 @@ export default function TasksPage() {
       const tasksData = await tasksRes.json();
       const categoriesData = await categoriesRes.json();
       
-      if (tasksData.success && Array.isArray(tasksData.data)) {
-        setTasks(tasksData.data);
+      // API returns plain arrays
+      if (Array.isArray(tasksData)) {
+        setTasks(tasksData);
       }
       
       if (Array.isArray(categoriesData)) {
@@ -82,17 +83,17 @@ export default function TasksPage() {
   const handleSaveTask = async (taskData: Omit<Task, 'id'> & { id?: number }) => {
     try {
       if (taskData.id) {
-        const response = await fetch(`/api/tasks/${taskData.id}`, {
+        const response = await fetch(`/api/tasks?id=${taskData.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(taskData),
         });
         const data = await response.json();
-        if (data.success) {
+        if (response.ok) {
           toast.success('Task updated successfully');
           fetchData();
         } else {
-          toast.error('Failed to update task');
+          toast.error(data.error || 'Failed to update task');
         }
       } else {
         const response = await fetch('/api/tasks', {
@@ -101,11 +102,11 @@ export default function TasksPage() {
           body: JSON.stringify(taskData),
         });
         const data = await response.json();
-        if (data.success) {
+        if (response.ok) {
           toast.success('Task created successfully');
           fetchData();
         } else {
-          toast.error('Failed to create task');
+          toast.error(data.error || 'Failed to create task');
         }
       }
       setEditingTask(null);
@@ -117,15 +118,15 @@ export default function TasksPage() {
 
   const handleDeleteTask = async (id: number) => {
     try {
-      const response = await fetch(`/api/tasks/${id}`, {
+      const response = await fetch(`/api/tasks?id=${id}`, {
         method: 'DELETE',
       });
       const data = await response.json();
-      if (data.success) {
+      if (response.ok) {
         toast.success('Task deleted successfully');
         fetchData();
       } else {
-        toast.error('Failed to delete task');
+        toast.error(data.error || 'Failed to delete task');
       }
     } catch (error) {
       console.error('Failed to delete task:', error);
@@ -138,17 +139,17 @@ export default function TasksPage() {
       const task = tasks.find(t => t.id === id);
       if (!task) return;
 
-      const response = await fetch(`/api/tasks/${id}`, {
+      const response = await fetch(`/api/tasks?id=${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...task, status }),
       });
       const data = await response.json();
-      if (data.success) {
+      if (response.ok) {
         toast.success('Task status updated');
         fetchData();
       } else {
-        toast.error('Failed to update status');
+        toast.error(data.error || 'Failed to update status');
       }
     } catch (error) {
       console.error('Failed to update task status:', error);
