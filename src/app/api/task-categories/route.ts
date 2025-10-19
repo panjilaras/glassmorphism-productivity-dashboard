@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { taskCategories } from '@/db/schema';
-import { eq, like, desc, or } from 'drizzle-orm';
+import { taskCategories, tasks } from '@/db/schema';
+import { eq, like, desc, or, sql } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,10 +17,12 @@ export async function GET(request: NextRequest) {
         );
       }
 
+      const categoryId = parseInt(id);
+
       const category = await db
         .select()
         .from(taskCategories)
-        .where(eq(taskCategories.id, parseInt(id)))
+        .where(eq(taskCategories.id, categoryId))
         .limit(1);
 
       if (category.length === 0) {
@@ -30,7 +32,23 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      return NextResponse.json(category[0], { status: 200 });
+      // Calculate real-time taskCount and avgPoints
+      const stats = await db
+        .select({
+          taskCount: sql<number>`COUNT(${tasks.id})`,
+          avgPoints: sql<number>`COALESCE(AVG(${tasks.points}), 0)`,
+        })
+        .from(tasks)
+        .where(eq(tasks.categoryId, categoryId));
+
+      const taskCount = Number(stats[0]?.taskCount || 0);
+      const avgPoints = Number(stats[0]?.avgPoints || 0);
+
+      return NextResponse.json({
+        ...category[0],
+        taskCount,
+        avgPoints: Math.round(avgPoints * 100) / 100,
+      }, { status: 200 });
     }
 
     // List all categories with pagination and search
@@ -46,7 +64,29 @@ export async function GET(request: NextRequest) {
 
     const results = await query.limit(limit).offset(offset);
 
-    return NextResponse.json(results, { status: 200 });
+    // Calculate real-time taskCount and avgPoints for each category
+    const enrichedResults = await Promise.all(
+      results.map(async (category) => {
+        const stats = await db
+          .select({
+            taskCount: sql<number>`COUNT(${tasks.id})`,
+            avgPoints: sql<number>`COALESCE(AVG(${tasks.points}), 0)`,
+          })
+          .from(tasks)
+          .where(eq(tasks.categoryId, category.id));
+
+        const taskCount = Number(stats[0]?.taskCount || 0);
+        const avgPoints = Number(stats[0]?.avgPoints || 0);
+
+        return {
+          ...category,
+          taskCount,
+          avgPoints: Math.round(avgPoints * 100) / 100,
+        };
+      })
+    );
+
+    return NextResponse.json(enrichedResults, { status: 200 });
   } catch (error) {
     console.error('GET error:', error);
     return NextResponse.json(

@@ -28,8 +28,11 @@ import { toast } from 'sonner';
 interface Category {
   id: number;
   name: string;
-  color: string;
-  task_count?: number;
+  color: string | null;
+  taskCount: number;
+  avgPoints: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const colorPresets = [
@@ -50,9 +53,10 @@ export default function CategoriesPage() {
   const fetchCategories = React.useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/task-categories');
+      const response = await fetch('/api/task-categories?limit=100');
       const data = await response.json();
-      // API returns plain array
+      
+      // API returns plain array with taskCount and avgPoints calculated
       if (Array.isArray(data)) {
         setCategories(data);
       }
@@ -196,13 +200,13 @@ export default function CategoriesPage() {
             </GlassCard>
             <GlassCard className="text-center" gradient={2}>
               <p className="text-2xl font-bold text-blue-500">
-                {categories.reduce((sum, cat) => sum + (cat.task_count || 0), 0)}
+                {categories.reduce((sum, cat) => sum + (cat.taskCount || 0), 0)}
               </p>
               <p className="text-sm text-muted-foreground">Total Tasks</p>
             </GlassCard>
             <GlassCard className="text-center" gradient={3}>
               <p className="text-2xl font-bold text-purple-500">
-                {categories.length > 0 ? Math.round(categories.reduce((sum, cat) => sum + (cat.task_count || 0), 0) / categories.length) : 0}
+                {categories.length > 0 ? Math.round(categories.reduce((sum, cat) => sum + (cat.taskCount || 0), 0) / categories.length) : 0}
               </p>
               <p className="text-sm text-muted-foreground">Avg Tasks/Category</p>
             </GlassCard>
@@ -228,63 +232,38 @@ export default function CategoriesPage() {
                 <TableHeader>
                   <TableRow className="border-border hover:bg-transparent">
                     <TableHead>Category</TableHead>
-                    <TableHead>Color</TableHead>
                     <TableHead>Task Count</TableHead>
+                    <TableHead>Avg Points</TableHead>
+                    <TableHead className="text-right">Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredCategories.map((category) => (
-                    <TableRow key={category.id} className="border-border hover:bg-accent/20">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
+                    <tr key={category.id} className="border-b border-border hover:bg-accent/20">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
                           <div 
-                            className="w-8 h-8 rounded-lg shadow-sm"
-                            style={{ backgroundColor: category.color }}
+                            className="w-6 h-6 rounded"
+                            style={{ backgroundColor: category.color || '#E0E0E0' }}
                           />
                           <span className="font-medium">{category.name}</span>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          className="font-mono text-xs"
-                          style={{ 
-                            backgroundColor: `${category.color}40`,
-                            color: category.color,
-                            borderColor: category.color
-                          }}
-                        >
-                          {category.color}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className="bg-primary/20 text-primary">
-                          {category.task_count || 0} tasks
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="glass-card">
-                            <DropdownMenuItem onClick={() => handleEditCategory(category)}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteCategory(category.id)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                      <td className="py-3 px-4 text-muted-foreground">{category.taskCount}</td>
+                      <td className="py-3 px-4 text-muted-foreground">{category.avgPoints.toFixed(1)}</td>
+                      <td className="py-3 px-4 text-muted-foreground">
+                        {new Date(category.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <Button variant="ghost" size="icon" onClick={() => handleEditCategory(category)}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteCategory(category.id)}>
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </td>
+                    </tr>
                   ))}
                 </TableBody>
               </Table>

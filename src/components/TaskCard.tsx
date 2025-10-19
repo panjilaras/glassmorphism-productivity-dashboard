@@ -31,6 +31,7 @@ export interface Task {
   assignees: string[];
   dueDate: string;
   category?: string;
+  categoryColor?: string;
   points?: number;
 }
 
@@ -112,7 +113,7 @@ export function TaskCard({ task, onEdit, onDelete, onStatusChange }: TaskCardPro
         <div className="flex items-center gap-2 mb-3">
           <div
             className="w-6 h-6 rounded-lg flex items-center justify-center"
-            style={{ backgroundColor: `${categoryColors[task.category] || '#DDA0DD'}bb` }}
+            style={{ backgroundColor: `${task.categoryColor || '#DDA0DD'}bb` }}
           >
             <Tag className="w-3 h-3 text-gray-700" />
           </div>

@@ -5,7 +5,7 @@ import { eq, sql } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
   try {
-    // Fetch all tasks with their categories
+    // Fetch all completed tasks with their categories
     const allTasks = await db
       .select({
         id: tasks.id,
@@ -26,27 +26,29 @@ export async function GET(request: NextRequest) {
       allCategories.map(cat => [cat.id, { name: cat.name, color: cat.color }])
     );
 
-    // Calculate topAssignees
+    // Calculate topAssignees - only count completed tasks
     const assigneeStats = new Map<number, { taskCount: number; points: number }>();
 
-    allTasks.forEach(task => {
-      if (task.assigneeIds) {
-        const assigneeIdList = task.assigneeIds
-          .split(',')
-          .map(id => id.trim())
-          .filter(id => id !== '')
-          .map(id => parseInt(id))
-          .filter(id => !isNaN(id) && userMap.has(id));
+    allTasks
+      .filter(task => task.status === 'completed')
+      .forEach(task => {
+        if (task.assigneeIds) {
+          const assigneeIdList = task.assigneeIds
+            .split(',')
+            .map(id => id.trim())
+            .filter(id => id !== '')
+            .map(id => parseInt(id))
+            .filter(id => !isNaN(id) && userMap.has(id));
 
-        assigneeIdList.forEach(userId => {
-          const current = assigneeStats.get(userId) || { taskCount: 0, points: 0 };
-          assigneeStats.set(userId, {
-            taskCount: current.taskCount + 1,
-            points: current.points + (task.points || 0),
+          assigneeIdList.forEach(userId => {
+            const current = assigneeStats.get(userId) || { taskCount: 0, points: 0 };
+            assigneeStats.set(userId, {
+              taskCount: current.taskCount + 1,
+              points: current.points + (task.points || 0),
+            });
           });
-        });
-      }
-    });
+        }
+      });
 
     const topAssignees = Array.from(assigneeStats.entries())
       .map(([userId, stats]) => ({
@@ -55,14 +57,14 @@ export async function GET(request: NextRequest) {
         points: stats.points,
       }))
       .sort((a, b) => {
-        if (b.taskCount !== a.taskCount) {
-          return b.taskCount - a.taskCount;
+        if (b.points !== a.points) {
+          return b.points - a.points;
         }
-        return b.points - a.points;
+        return b.taskCount - a.taskCount;
       })
-      .slice(0, 10);
+      .slice(0, 5);
 
-    // Calculate tasksByCategory
+    // Calculate tasksByCategory with real category data
     const categoryStats = new Map<number | null, number>();
 
     allTasks.forEach(task => {

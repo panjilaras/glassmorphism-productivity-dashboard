@@ -64,60 +64,47 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, position, status } = body;
+    const { name, email, position, status, role, joinDate } = body;
 
     // Validate required fields
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    if (!name || typeof name !== 'string' || name.trim() === '') {
       return NextResponse.json(
-        { error: 'Name is required', code: 'MISSING_NAME' },
+        { error: 'Name is required and must be a non-empty string', code: 'MISSING_NAME' },
         { status: 400 }
       );
     }
 
-    if (!email || typeof email !== 'string' || email.trim().length === 0) {
+    if (!email || typeof email !== 'string' || email.trim() === '') {
       return NextResponse.json(
-        { error: 'Email is required', code: 'MISSING_EMAIL' },
+        { error: 'Email is required and must be a non-empty string', code: 'MISSING_EMAIL' },
         { status: 400 }
       );
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      return NextResponse.json(
-        { error: 'Invalid email format', code: 'INVALID_EMAIL' },
-        { status: 400 }
-      );
-    }
-
-    // Sanitize inputs
-    const sanitizedName = name.trim();
-    const sanitizedEmail = email.trim().toLowerCase();
-    const sanitizedPosition = position ? position.trim() : null;
-    const sanitizedStatus = status || 'active';
-
-    // Prepare insert data
     const now = new Date().toISOString();
-    const insertData = {
-      name: sanitizedName,
-      email: sanitizedEmail,
-      position: sanitizedPosition,
-      status: sanitizedStatus,
-      createdAt: now,
-      updatedAt: now,
-    };
 
-    // Insert user
-    const newUser = await db.insert(users).values(insertData).returning();
+    const newUser = await db
+      .insert(users)
+      .values({
+        name: name.trim(),
+        email: email.trim(),
+        position: position || null,
+        status: status || 'active',
+        role: role || 'member',
+        joinDate: joinDate || now,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
 
     return NextResponse.json(newUser[0], { status: 201 });
   } catch (error: any) {
     console.error('POST error:', error);
-    
-    // Handle unique constraint violation for email
-    if (error.message && error.message.includes('UNIQUE')) {
+
+    // Handle unique constraint violation
+    if (error.message && error.message.includes('UNIQUE constraint failed')) {
       return NextResponse.json(
-        { error: 'Email already exists', code: 'EMAIL_EXISTS' },
+        { error: 'A user with this email already exists', code: 'DUPLICATE_EMAIL' },
         { status: 400 }
       );
     }
@@ -131,7 +118,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get('id');
 
     // Validate ID
@@ -142,11 +129,13 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    const userId = parseInt(id);
+
     // Check if user exists
     const existingUser = await db
       .select()
       .from(users)
-      .where(eq(users.id, parseInt(id)))
+      .where(eq(users.id, userId))
       .limit(1);
 
     if (existingUser.length === 0) {
@@ -157,71 +146,63 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, email, position, status } = body;
+    const { name, email, position, status, role, joinDate } = body;
 
     // Prepare update data
-    const updates: any = {
+    const updateData: any = {
       updatedAt: new Date().toISOString(),
     };
 
-    // Validate and sanitize fields if provided
     if (name !== undefined) {
-      if (typeof name !== 'string' || name.trim().length === 0) {
+      if (typeof name !== 'string' || name.trim() === '') {
         return NextResponse.json(
           { error: 'Name must be a non-empty string', code: 'INVALID_NAME' },
           { status: 400 }
         );
       }
-      updates.name = name.trim();
+      updateData.name = name.trim();
     }
 
     if (email !== undefined) {
-      if (typeof email !== 'string' || email.trim().length === 0) {
+      if (typeof email !== 'string' || email.trim() === '') {
         return NextResponse.json(
           { error: 'Email must be a non-empty string', code: 'INVALID_EMAIL' },
           { status: 400 }
         );
       }
-
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email.trim())) {
-        return NextResponse.json(
-          { error: 'Invalid email format', code: 'INVALID_EMAIL_FORMAT' },
-          { status: 400 }
-        );
-      }
-      updates.email = email.trim().toLowerCase();
+      updateData.email = email.trim();
     }
 
     if (position !== undefined) {
-      updates.position = position ? position.trim() : null;
+      updateData.position = position || null;
     }
 
     if (status !== undefined) {
-      if (typeof status !== 'string' || status.trim().length === 0) {
-        return NextResponse.json(
-          { error: 'Status must be a non-empty string', code: 'INVALID_STATUS' },
-          { status: 400 }
-        );
-      }
-      updates.status = status.trim();
+      updateData.status = status;
     }
 
-    // Update user
+    if (role !== undefined) {
+      updateData.role = role;
+    }
+
+    if (joinDate !== undefined) {
+      updateData.joinDate = joinDate;
+    }
+
     const updatedUser = await db
       .update(users)
-      .set(updates)
-      .where(eq(users.id, parseInt(id)))
+      .set(updateData)
+      .where(eq(users.id, userId))
       .returning();
 
     return NextResponse.json(updatedUser[0], { status: 200 });
   } catch (error: any) {
     console.error('PUT error:', error);
 
-    // Handle unique constraint violation for email
-    if (error.message && error.message.includes('UNIQUE')) {
+    // Handle unique constraint violation
+    if (error.message && error.message.includes('UNIQUE constraint failed')) {
       return NextResponse.json(
-        { error: 'Email already exists', code: 'EMAIL_EXISTS' },
+        { error: 'A user with this email already exists', code: 'DUPLICATE_EMAIL' },
         { status: 400 }
       );
     }

@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Navigation } from '@/components/Navigation';
-import { UserDialog, User } from '@/components/UserDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -24,12 +23,32 @@ import {
 import { Plus, Search, MoreVertical, Edit, Trash2, Shield, UserCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { MetricCard } from '@/components/MetricCard';
+import { Users } from 'lucide-react';
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  position: string | null;
+  status: 'active' | 'inactive';
+  role: string;
+  joinDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const statusConfig = {
+  active: { label: 'Active', color: 'bg-green-500/20 text-green-700 dark:text-green-400' },
+  inactive: { label: 'Inactive', color: 'bg-gray-500/20 text-gray-700 dark:text-gray-400' },
+};
 
 const roleConfig = {
-  admin: { label: 'Admin', color: 'bg-purple-500/20 text-purple-700 dark:text-purple-400', icon: Shield },
-  manager: { label: 'Manager', color: 'bg-blue-500/20 text-blue-700 dark:text-blue-400', icon: UserCheck },
-  member: { label: 'Member', color: 'bg-green-500/20 text-green-700 dark:text-green-400', icon: UserCheck },
-  viewer: { label: 'Viewer', color: 'bg-gray-500/20 text-gray-700 dark:text-gray-400', icon: UserCheck },
+  admin: { label: 'Admin', color: 'bg-purple-500/20 text-purple-700 dark:text-purple-400' },
+  member: { label: 'Member', color: 'bg-blue-500/20 text-blue-700 dark:text-blue-400' },
 };
 
 export default function UsersPage() {
@@ -37,8 +56,17 @@ export default function UsersPage() {
   const [filteredUsers, setFilteredUsers] = React.useState<User[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [roleFilter, setRoleFilter] = React.useState('all');
+  const [statusFilter, setStatusFilter] = React.useState('all');
   const [editingUser, setEditingUser] = React.useState<User | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [formData, setFormData] = React.useState({
+    name: '',
+    email: '',
+    position: '',
+    status: 'active' as const,
+    role: 'member' as const,
+  });
 
   // Fetch users from API
   const fetchUsers = React.useCallback(async () => {
@@ -75,45 +103,61 @@ export default function UsersPage() {
     }
   }, [searchQuery, users]);
 
-  const handleSaveUser = async (userData: Omit<User, 'id'> & { id?: number }) => {
+  const handleEdit = (user: User) => {
+    setEditingUser(user);
+    setFormData({
+      name: user.name,
+      email: user.email,
+      position: user.position || '',
+      status: user.status,
+      role: user.role || 'member',
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     try {
-      if (userData.id) {
-        // Update existing user
-        const response = await fetch(`/api/users?id=${userData.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(userData),
-        });
-        const data = await response.json();
-        if (response.ok) {
-          toast.success('User updated successfully');
-          fetchUsers();
-        } else {
-          toast.error(data.error || 'Failed to update user');
-        }
-      } else {
-        // Create new user
-        const response = await fetch('/api/users', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(userData),
-        });
-        const data = await response.json();
-        if (response.ok) {
-          toast.success('User created successfully');
-          fetchUsers();
-        } else {
-          toast.error(data.error || 'Failed to create user');
-        }
+      const url = editingUser 
+        ? `/api/users?id=${editingUser.id}`
+        : '/api/users';
+      
+      const method = editingUser ? 'PUT' : 'POST';
+      
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        position: formData.position || null,
+        status: formData.status,
+        role: formData.role,
+        ...(editingUser ? {} : { joinDate: new Date().toISOString() }),
+      };
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        fetchUsers();
+        setIsDialogOpen(false);
+        setEditingUser(null);
+        setFormData({ name: '', email: '', position: '', status: 'active', role: 'member' });
       }
-      setEditingUser(null);
     } catch (error) {
       console.error('Failed to save user:', error);
-      toast.error('Failed to save user');
     }
   };
 
-  const handleDeleteUser = async (id: number) => {
+  const openCreateDialog = () => {
+    setEditingUser(null);
+    setFormData({ name: '', email: '', position: '', status: 'active', role: 'member' });
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = async (id: number) => {
     try {
       const response = await fetch(`/api/users?id=${id}`, {
         method: 'DELETE',
@@ -129,16 +173,6 @@ export default function UsersPage() {
       console.error('Failed to delete user:', error);
       toast.error('Failed to delete user');
     }
-  };
-
-  const handleEditUser = (user: User) => {
-    setEditingUser(user);
-    setDialogOpen(true);
-  };
-
-  const handleCreateUser = () => {
-    setEditingUser(null);
-    setDialogOpen(true);
   };
 
   if (loading) {
@@ -166,30 +200,62 @@ export default function UsersPage() {
               <h1 className="text-4xl font-bold mb-2">Users</h1>
               <p className="text-muted-foreground">Manage team members and their roles</p>
             </div>
-            <Button onClick={handleCreateUser} size="lg" className="shadow-lg">
+            <Button onClick={openCreateDialog} size="lg" className="shadow-lg">
               <Plus className="w-5 h-5 mr-2" />
               Add User
             </Button>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <GlassCard className="text-center" gradient={1}>
-              <p className="text-2xl font-bold text-primary">{users.length}</p>
-              <p className="text-sm text-muted-foreground">Total Users</p>
-            </GlassCard>
-            <GlassCard className="text-center" gradient={2}>
-              <p className="text-2xl font-bold text-purple-500">{users.filter(u => u.role === 'admin').length}</p>
-              <p className="text-sm text-muted-foreground">Admins</p>
-            </GlassCard>
-            <GlassCard className="text-center" gradient={3}>
-              <p className="text-2xl font-bold text-blue-500">{users.filter(u => u.role === 'manager').length}</p>
-              <p className="text-sm text-muted-foreground">Managers</p>
-            </GlassCard>
-            <GlassCard className="text-center" gradient={4}>
-              <p className="text-2xl font-bold text-green-500">{users.filter(u => u.status === 'active').length}</p>
-              <p className="text-sm text-muted-foreground">Active</p>
-            </GlassCard>
+          {/* Filters */}
+          <div className="flex gap-2">
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="glass-card w-[150px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="glass-card">
+                <SelectItem value="all">All Roles</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="member">Member</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="glass-card w-[150px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="glass-card">
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <MetricCard
+              title="Total Users"
+              value={users.length}
+              icon={Users}
+              gradient={1}
+            />
+            <MetricCard
+              title="Active"
+              value={users.filter(u => u.status === 'active').length}
+              icon={UserCheck}
+              gradient={2}
+            />
+            <MetricCard
+              title="Admins"
+              value={users.filter(u => u.role === 'admin').length}
+              icon={Shield}
+              gradient={3}
+            />
+            <MetricCard
+              title="Members"
+              value={users.filter(u => u.role === 'member').length}
+              icon={Users}
+              gradient={4}
+            />
           </div>
 
           {/* Search */}
@@ -206,92 +272,128 @@ export default function UsersPage() {
           </GlassCard>
 
           {/* Users Table */}
-          <GlassCard className="overflow-hidden">
+          <GlassCard>
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-border hover:bg-transparent">
-                    <TableHead>User</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Position</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Join Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((user) => {
-                    return (
-                      <TableRow key={user.id} className="border-border hover:bg-accent/20">
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-semibold">
-                              {user.name.split(' ').map(n => n[0]).join('')}
-                            </div>
-                            <span className="font-medium">{user.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                        <TableCell>{user.position || '-'}</TableCell>
-                        <TableCell>
-                          <Badge
-                            className={cn(
-                              'font-medium',
-                              user.status === 'active'
-                                ? 'bg-green-500/20 text-green-700 dark:text-green-400'
-                                : 'bg-gray-500/20 text-gray-700 dark:text-gray-400'
-                            )}
-                          >
-                            {user.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreVertical className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="glass-card">
-                              <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleDeleteUser(user.id)}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 px-4 font-semibold">Name</th>
+                    <th className="text-left py-3 px-4 font-semibold">Email</th>
+                    <th className="text-left py-3 px-4 font-semibold">Position</th>
+                    <th className="text-left py-3 px-4 font-semibold">Role</th>
+                    <th className="text-left py-3 px-4 font-semibold">Status</th>
+                    <th className="text-left py-3 px-4 font-semibold">Join Date</th>
+                    <th className="text-right py-3 px-4 font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.map((user) => (
+                    <tr key={user.id} className="border-b border-border hover:bg-accent/20">
+                      <td className="py-3 px-4 font-medium">{user.name}</td>
+                      <td className="py-3 px-4 text-muted-foreground">{user.email}</td>
+                      <td className="py-3 px-4">{user.position || '-'}</td>
+                      <td className="py-3 px-4">
+                        <Badge className={roleConfig[user.role as keyof typeof roleConfig]?.color || roleConfig.member.color}>
+                          {roleConfig[user.role as keyof typeof roleConfig]?.label || 'Member'}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-4">
+                        <Badge className={statusConfig[user.status].color}>
+                          {statusConfig[user.status].label}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-4 text-muted-foreground">
+                        {user.joinDate ? new Date(user.joinDate).toLocaleDateString() : new Date(user.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(user)}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(user.id)}>
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-
-            {filteredUsers.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">No users found</p>
-              </div>
-            )}
           </GlassCard>
         </div>
       </main>
 
-      <UserDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        user={editingUser}
-        onSave={handleSaveUser}
-      />
+      {/* Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="glass-card">
+          <DialogHeader>
+            <DialogTitle>{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="name">Name *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="glass-card"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="glass-card"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="position">Position</Label>
+              <Input
+                id="position"
+                value={formData.position}
+                onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                className="glass-card"
+              />
+            </div>
+            <div>
+              <Label htmlFor="role">Role</Label>
+              <Select value={formData.role} onValueChange={(value: 'admin' | 'member') => setFormData({ ...formData, role: value })}>
+                <SelectTrigger className="glass-card">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="glass-card">
+                  <SelectItem value="member">Member</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Select value={formData.status} onValueChange={(value: 'active' | 'inactive') => setFormData({ ...formData, status: value })}>
+                <SelectTrigger className="glass-card">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="glass-card">
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                {editingUser ? 'Update' : 'Create'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

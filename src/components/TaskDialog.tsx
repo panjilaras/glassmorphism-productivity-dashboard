@@ -7,32 +7,55 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Task } from './TaskCard';
+
+interface Task {
+  id: number;
+  title: string;
+  description: string;
+  status: 'todo' | 'in-progress' | 'completed' | 'cancelled';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  assigneeIds: string | null;
+  dueDate: string;
+  categoryId: number | null;
+  points?: number;
+}
+
+interface Category {
+  id: number;
+  name: string;
+  color: string | null;
+}
+
+interface User {
+  id: number;
+  name: string;
+  status: string;
+}
 
 interface TaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  task?: Task | null;
-  onSave: (task: Omit<Task, 'id'> & { id?: number }) => void;
+  task: Task | null;
+  onSave: (task: Partial<Task>) => Promise<void>;
 }
 
 export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps) {
-  const [activeUsers, setActiveUsers] = React.useState<Array<{ id: number; name: string }>>([]);
-  const [categories, setCategories] = React.useState<Array<{ id: number; name: string; color: string }>>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [formData, setFormData] = React.useState<Omit<Task, 'id'>>({
+  const [loading, setLoading] = React.useState(false);
+  const [categories, setCategories] = React.useState<Category[]>([]);
+  const [activeUsers, setActiveUsers] = React.useState<User[]>([]);
+  const [selectedAssignees, setSelectedAssignees] = React.useState<number[]>([]);
+  
+  const [formData, setFormData] = React.useState({
     title: '',
     description: '',
-    status: 'todo',
-    priority: 'medium',
-    assignees: [],
-    dueDate: '',
-    category: '',
+    status: 'todo' as Task['status'],
+    priority: 'medium' as Task['priority'],
+    categoryId: null as number | null,
     points: 0,
+    dueDate: new Date().toISOString().split('T')[0],
   });
 
-  // Fetch users and categories from API
+  // Fetch users and categories when dialog opens
   React.useEffect(() => {
     async function fetchData() {
       try {
@@ -47,11 +70,11 @@ export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps
         
         // API returns plain arrays
         if (Array.isArray(usersData)) {
-          setActiveUsers(usersData.filter((u: any) => u.status === 'active').map((u: any) => ({ id: u.id, name: u.name })));
+          setActiveUsers(usersData.filter((u: any) => u.status === 'active'));
         }
         
         if (Array.isArray(categoriesData)) {
-          setCategories(categoriesData.map((c: any) => ({ id: c.id, name: c.name, color: c.color || '#E6E6FA' })));
+          setCategories(categoriesData);
         }
       } catch (error) {
         console.error('Failed to fetch data:', error);
@@ -65,130 +88,95 @@ export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps
     }
   }, [open]);
 
+  // Reset form when task changes or dialog opens
   React.useEffect(() => {
     if (task) {
       setFormData({
         title: task.title,
-        description: task.description,
+        description: task.description || '',
         status: task.status,
         priority: task.priority,
-        assignees: task.assignees || [],
-        dueDate: task.dueDate,
-        category: task.category || '',
+        categoryId: task.categoryId,
         points: task.points || 0,
+        dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       });
+      
+      // Parse assigneeIds (comma-separated string)
+      if (task.assigneeIds) {
+        const ids = task.assigneeIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+        setSelectedAssignees(ids);
+      } else {
+        setSelectedAssignees([]);
+      }
     } else {
       setFormData({
         title: '',
         description: '',
         status: 'todo',
         priority: 'medium',
-        assignees: [],
-        dueDate: '',
-        category: '',
+        categoryId: null,
         points: 0,
+        dueDate: new Date().toISOString().split('T')[0],
       });
+      setSelectedAssignees([]);
     }
   }, [task, open]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(task ? { ...formData, id: task.id } : formData);
+    
+    const taskData = {
+      ...formData,
+      assigneeIds: selectedAssignees.length > 0 ? selectedAssignees.join(',') : null,
+      dueDate: formData.dueDate ? new Date(formData.dueDate).toISOString() : new Date().toISOString(),
+    };
+    
+    await onSave(taskData);
     onOpenChange(false);
   };
 
-  const handleAssigneeToggle = (userName: string) => {
-    setFormData(prev => ({
-      ...prev,
-      assignees: prev.assignees.includes(userName)
-        ? prev.assignees.filter(a => a !== userName)
-        : [...prev.assignees, userName]
-    }));
+  const toggleAssignee = (userId: number) => {
+    setSelectedAssignees(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-card sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="glass-card max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{task ? 'Edit Task' : 'Create New Task'}</DialogTitle>
         </DialogHeader>
+        
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
+          <div>
+            <Label htmlFor="title">Title *</Label>
             <Input
               id="title"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              required
               className="glass-card"
+              required
             />
           </div>
 
-          <div className="space-y-2">
+          <div>
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              required
               className="glass-card"
               rows={3}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="category">Task Category</Label>
-              <Select
-                value={formData.category}
-                onValueChange={(value) => setFormData({ ...formData, category: value })}
-              >
-                <SelectTrigger className="glass-card">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent className="glass-card">
-                  {loading ? (
-                    <div className="p-2 text-sm text-muted-foreground text-center">Loading...</div>
-                  ) : categories.length > 0 ? (
-                    categories.map(cat => (
-                      <SelectItem key={cat.id} value={cat.name}>
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-3 h-3 rounded-full" 
-                            style={{ backgroundColor: cat.color }}
-                          />
-                          {cat.name}
-                        </div>
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <div className="p-2 text-sm text-muted-foreground text-center">No categories found</div>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="points">Task Points</Label>
-              <Input
-                id="points"
-                type="number"
-                min="0"
-                value={formData.points}
-                onChange={(e) => setFormData({ ...formData, points: parseInt(e.target.value) || 0 })}
-                required
-                className="glass-card"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+            <div>
               <Label htmlFor="status">Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value: Task['status']) => setFormData({ ...formData, status: value })}
-              >
+              <Select value={formData.status} onValueChange={(value: Task['status']) => setFormData({ ...formData, status: value })}>
                 <SelectTrigger className="glass-card">
                   <SelectValue />
                 </SelectTrigger>
@@ -201,12 +189,9 @@ export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div>
               <Label htmlFor="priority">Priority</Label>
-              <Select
-                value={formData.priority}
-                onValueChange={(value: Task['priority']) => setFormData({ ...formData, priority: value })}
-              >
+              <Select value={formData.priority} onValueChange={(value: Task['priority']) => setFormData({ ...formData, priority: value })}>
                 <SelectTrigger className="glass-card">
                   <SelectValue />
                 </SelectTrigger>
@@ -220,43 +205,72 @@ export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Assignees (Select Multiple)</Label>
-            <div className="glass-card p-4 rounded-xl max-h-48 overflow-y-auto space-y-3">
-              {loading ? (
-                <p className="text-sm text-muted-foreground text-center py-4">Loading users...</p>
-              ) : activeUsers.length > 0 ? (
-                activeUsers.map((user) => (
-                  <div key={user.id} className="flex items-center gap-3">
-                    <Checkbox
-                      id={`user-${user.id}`}
-                      checked={formData.assignees.includes(user.name)}
-                      onCheckedChange={() => handleAssigneeToggle(user.name)}
-                    />
-                    <Label
-                      htmlFor={`user-${user.id}`}
-                      className="flex-1 cursor-pointer"
-                    >
-                      {user.name}
-                    </Label>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">No active users found</p>
-              )}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="category">Category</Label>
+              <Select 
+                value={formData.categoryId?.toString() || 'none'} 
+                onValueChange={(value) => setFormData({ ...formData, categoryId: value === 'none' ? null : parseInt(value) })}
+              >
+                <SelectTrigger className="glass-card">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent className="glass-card">
+                  <SelectItem value="none">No Category</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id.toString()}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="points">Points</Label>
+              <Input
+                id="points"
+                type="number"
+                min="0"
+                value={formData.points}
+                onChange={(e) => setFormData({ ...formData, points: parseInt(e.target.value) || 0 })}
+                className="glass-card"
+              />
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div>
             <Label htmlFor="dueDate">Due Date</Label>
             <Input
               id="dueDate"
               type="date"
               value={formData.dueDate}
               onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-              required
               className="glass-card"
             />
+          </div>
+
+          <div>
+            <Label>Assignees</Label>
+            <div className="mt-2 space-y-2 max-h-40 overflow-y-auto border border-border rounded-lg p-3 glass-card">
+              {loading ? (
+                <p className="text-sm text-muted-foreground">Loading users...</p>
+              ) : activeUsers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No active users available</p>
+              ) : (
+                activeUsers.map((user) => (
+                  <label key={user.id} className="flex items-center gap-2 cursor-pointer hover:bg-accent/20 p-2 rounded">
+                    <input
+                      type="checkbox"
+                      checked={selectedAssignees.includes(user.id)}
+                      onChange={() => toggleAssignee(user.id)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">{user.name}</span>
+                  </label>
+                ))
+              )}
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
@@ -264,7 +278,7 @@ export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps
               Cancel
             </Button>
             <Button type="submit">
-              {task ? 'Save Changes' : 'Create Task'}
+              {task ? 'Update Task' : 'Create Task'}
             </Button>
           </div>
         </form>

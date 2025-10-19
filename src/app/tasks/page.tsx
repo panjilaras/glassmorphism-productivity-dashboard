@@ -23,21 +23,47 @@ export default function TasksPage() {
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingTask, setEditingTask] = React.useState<Task | null>(null);
 
-  // Fetch tasks and categories from API
-  const fetchData = React.useCallback(async () => {
+  // Fetch tasks and categories
+  const fetchTasks = React.useCallback(async () => {
     try {
       setLoading(true);
-      const [tasksRes, categoriesRes] = await Promise.all([
-        fetch('/api/tasks'),
-        fetch('/api/task-categories')
+      const [tasksRes, categoriesRes, usersRes] = await Promise.all([
+        fetch('/api/tasks?limit=100'),
+        fetch('/api/task-categories?limit=100'),
+        fetch('/api/users?limit=100')
       ]);
       
       const tasksData = await tasksRes.json();
       const categoriesData = await categoriesRes.json();
+      const usersData = await usersRes.json();
       
-      // API returns plain arrays
       if (Array.isArray(tasksData)) {
-        setTasks(tasksData);
+        // Create user map for assignee names
+        const userMap = new Map(usersData.map((u: any) => [u.id, u.name]));
+        
+        // Create category map for category names and colors
+        const categoryMap = new Map(categoriesData.map((c: any) => [c.id, { name: c.name, color: c.color }]));
+        
+        // Enrich tasks with category names and assignee names
+        const enrichedTasks = tasksData.map((task: any) => {
+          const category = task.categoryId ? categoryMap.get(task.categoryId) : null;
+          
+          // Parse assigneeIds and convert to names
+          let assignees: string[] = [];
+          if (task.assigneeIds) {
+            const ids = task.assigneeIds.split(',').map((id: string) => parseInt(id.trim())).filter((id: number) => !isNaN(id));
+            assignees = ids.map((id: number) => userMap.get(id) || 'Unknown').filter((name: string) => name !== 'Unknown');
+          }
+          
+          return {
+            ...task,
+            category: category?.name || undefined,
+            categoryColor: category?.color || undefined,
+            assignees,
+          };
+        });
+        
+        setTasks(enrichedTasks);
       }
       
       if (Array.isArray(categoriesData)) {
@@ -45,15 +71,15 @@ export default function TasksPage() {
       }
     } catch (error) {
       console.error('Failed to fetch data:', error);
-      toast.error('Failed to load data');
+      toast.error('Failed to load tasks');
     } finally {
       setLoading(false);
     }
   }, []);
 
   React.useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchTasks();
+  }, [fetchTasks]);
 
   React.useEffect(() => {
     let filtered = tasks;
@@ -91,7 +117,7 @@ export default function TasksPage() {
         const data = await response.json();
         if (response.ok) {
           toast.success('Task updated successfully');
-          fetchData();
+          fetchTasks();
         } else {
           toast.error(data.error || 'Failed to update task');
         }
@@ -104,7 +130,7 @@ export default function TasksPage() {
         const data = await response.json();
         if (response.ok) {
           toast.success('Task created successfully');
-          fetchData();
+          fetchTasks();
         } else {
           toast.error(data.error || 'Failed to create task');
         }
@@ -124,7 +150,7 @@ export default function TasksPage() {
       const data = await response.json();
       if (response.ok) {
         toast.success('Task deleted successfully');
-        fetchData();
+        fetchTasks();
       } else {
         toast.error(data.error || 'Failed to delete task');
       }
@@ -147,7 +173,7 @@ export default function TasksPage() {
       const data = await response.json();
       if (response.ok) {
         toast.success('Task status updated');
-        fetchData();
+        fetchTasks();
       } else {
         toast.error(data.error || 'Failed to update status');
       }

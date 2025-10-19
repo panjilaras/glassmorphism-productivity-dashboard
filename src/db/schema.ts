@@ -6,6 +6,8 @@ export const users = sqliteTable('users', {
   email: text('email').notNull().unique(),
   position: text('position'),
   status: text('status').notNull().default('active'),
+  role: text('role').notNull().default('member'),
+  joinDate: text('join_date'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
