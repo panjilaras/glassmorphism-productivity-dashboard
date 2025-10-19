@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 export default function TasksPage() {
   const [tasks, setTasks] = React.useState<Task[]>([]);
   const [filteredTasks, setFilteredTasks] = React.useState<Task[]>([]);
+  const [categories, setCategories] = React.useState<Array<{ id: number; name: string }>>([]);
   const [loading, setLoading] = React.useState(true);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<string>('all');
@@ -22,26 +23,36 @@ export default function TasksPage() {
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingTask, setEditingTask] = React.useState<Task | null>(null);
 
-  // Fetch tasks from API
-  const fetchTasks = React.useCallback(async () => {
+  // Fetch tasks and categories from API
+  const fetchData = React.useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/tasks');
-      const data = await response.json();
-      if (data.success && Array.isArray(data.data)) {
-        setTasks(data.data);
+      const [tasksRes, categoriesRes] = await Promise.all([
+        fetch('/api/tasks'),
+        fetch('/api/task-categories')
+      ]);
+      
+      const tasksData = await tasksRes.json();
+      const categoriesData = await categoriesRes.json();
+      
+      if (tasksData.success && Array.isArray(tasksData.data)) {
+        setTasks(tasksData.data);
+      }
+      
+      if (Array.isArray(categoriesData)) {
+        setCategories(categoriesData);
       }
     } catch (error) {
-      console.error('Failed to fetch tasks:', error);
-      toast.error('Failed to load tasks');
+      console.error('Failed to fetch data:', error);
+      toast.error('Failed to load data');
     } finally {
       setLoading(false);
     }
   }, []);
 
   React.useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+    fetchData();
+  }, [fetchData]);
 
   React.useEffect(() => {
     let filtered = tasks;
@@ -71,7 +82,6 @@ export default function TasksPage() {
   const handleSaveTask = async (taskData: Omit<Task, 'id'> & { id?: number }) => {
     try {
       if (taskData.id) {
-        // Update existing task
         const response = await fetch(`/api/tasks/${taskData.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -80,12 +90,11 @@ export default function TasksPage() {
         const data = await response.json();
         if (data.success) {
           toast.success('Task updated successfully');
-          fetchTasks(); // Refresh tasks
+          fetchData();
         } else {
           toast.error('Failed to update task');
         }
       } else {
-        // Create new task
         const response = await fetch('/api/tasks', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -94,7 +103,7 @@ export default function TasksPage() {
         const data = await response.json();
         if (data.success) {
           toast.success('Task created successfully');
-          fetchTasks(); // Refresh tasks
+          fetchData();
         } else {
           toast.error('Failed to create task');
         }
@@ -114,7 +123,7 @@ export default function TasksPage() {
       const data = await response.json();
       if (data.success) {
         toast.success('Task deleted successfully');
-        fetchTasks(); // Refresh tasks
+        fetchData();
       } else {
         toast.error('Failed to delete task');
       }
@@ -137,7 +146,7 @@ export default function TasksPage() {
       const data = await response.json();
       if (data.success) {
         toast.success('Task status updated');
-        fetchTasks(); // Refresh tasks
+        fetchData();
       } else {
         toast.error('Failed to update status');
       }
@@ -237,11 +246,11 @@ export default function TasksPage() {
                   </SelectTrigger>
                   <SelectContent className="glass-card">
                     <SelectItem value="all">All Categories</SelectItem>
-                    <SelectItem value="UAT">UAT</SelectItem>
-                    <SelectItem value="Datafix">Datafix</SelectItem>
-                    <SelectItem value="Training">Training</SelectItem>
-                    <SelectItem value="Task Force">Task Force</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
+                    {categories.map(cat => (
+                      <SelectItem key={cat.id} value={cat.name}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

@@ -17,16 +17,9 @@ interface TaskDialogProps {
   onSave: (task: Omit<Task, 'id'> & { id?: number }) => void;
 }
 
-const categories = [
-  { id: 1, name: 'UAT', color: '#E6E6FA' },
-  { id: 2, name: 'Datafix', color: '#ADD8E6' },
-  { id: 3, name: 'Training', color: '#FFB6C1' },
-  { id: 4, name: 'Task Force', color: '#FFDAB9' },
-  { id: 5, name: 'Other', color: '#DDA0DD' },
-];
-
 export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps) {
   const [activeUsers, setActiveUsers] = React.useState<Array<{ id: number; name: string }>>([]);
+  const [categories, setCategories] = React.useState<Array<{ id: number; name: string; color: string }>>([]);
   const [loading, setLoading] = React.useState(true);
   const [formData, setFormData] = React.useState<Omit<Task, 'id'>>({
     title: '',
@@ -39,25 +32,35 @@ export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps
     points: 0,
   });
 
-  // Fetch users from API
+  // Fetch users and categories from API
   React.useEffect(() => {
-    async function fetchUsers() {
+    async function fetchData() {
       try {
         setLoading(true);
-        const response = await fetch('/api/users');
-        const data = await response.json();
-        if (data.success && Array.isArray(data.data)) {
-          setActiveUsers(data.data.filter((u: any) => u.status === 'active').map((u: any) => ({ id: u.id, name: u.name })));
+        const [usersRes, categoriesRes] = await Promise.all([
+          fetch('/api/users'),
+          fetch('/api/task-categories')
+        ]);
+        
+        const usersData = await usersRes.json();
+        const categoriesData = await categoriesRes.json();
+        
+        if (usersData.success && Array.isArray(usersData.data)) {
+          setActiveUsers(usersData.data.filter((u: any) => u.status === 'active').map((u: any) => ({ id: u.id, name: u.name })));
+        }
+        
+        if (Array.isArray(categoriesData)) {
+          setCategories(categoriesData);
         }
       } catch (error) {
-        console.error('Failed to fetch users:', error);
+        console.error('Failed to fetch data:', error);
       } finally {
         setLoading(false);
       }
     }
     
     if (open) {
-      fetchUsers();
+      fetchData();
     }
   }, [open]);
 
@@ -143,17 +146,23 @@ export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent className="glass-card">
-                  {categories.map(cat => (
-                    <SelectItem key={cat.id} value={cat.name}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: cat.color }}
-                        />
-                        {cat.name}
-                      </div>
-                    </SelectItem>
-                  ))}
+                  {loading ? (
+                    <div className="p-2 text-sm text-muted-foreground text-center">Loading...</div>
+                  ) : categories.length > 0 ? (
+                    categories.map(cat => (
+                      <SelectItem key={cat.id} value={cat.name}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: cat.color }}
+                          />
+                          {cat.name}
+                        </div>
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="p-2 text-sm text-muted-foreground text-center">No categories found</div>
+                  )}
                 </SelectContent>
               </Select>
             </div>
