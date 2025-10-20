@@ -105,9 +105,9 @@ export function Navigation() {
           !desktopSidebarOpen && 'lg:-translate-x-full'
         )}>
 
-        <GlassCard className="h-full m-4 flex flex-col">
+        <GlassCard className="m-4 flex flex-col !w-[262px] !h-full">
           <div className="p-6 border-b border-border">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent !w-[121%] !h-16">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent !w-[121%] !h-[38px]">
               Productivity
             </h1>
             <p className="text-sm text-muted-foreground mt-1">Management System</p>
