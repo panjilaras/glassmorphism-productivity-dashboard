@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Search, MoreVertical, Edit, Trash2, Shield, UserCheck } from 'lucide-react';
+import { Plus, Search, MoreVertical, Edit, Trash2, Shield, UserCheck, Upload, User as UserIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
@@ -37,6 +37,7 @@ interface User {
   status: 'active' | 'inactive';
   role: string;
   joinDate: string | null;
+  avatarUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -68,7 +69,10 @@ export default function UsersPage() {
     status: 'active' as const,
     role: 'member' as const,
     joinDate: '',
+    avatarUrl: '',
   });
+  const [avatarFile, setAvatarFile] = React.useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = React.useState<string>('');
 
   // Fetch users from API
   const fetchUsers = React.useCallback(async () => {
@@ -122,8 +126,37 @@ export default function UsersPage() {
       status: user.status,
       role: user.role || 'member',
       joinDate: user.joinDate ? new Date(user.joinDate).toISOString().split('T')[0] : '',
+      avatarUrl: user.avatarUrl || '',
     });
+    setAvatarPreview(user.avatarUrl || '');
+    setAvatarFile(null);
     setIsDialogOpen(true);
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file size (max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error('Image size must be less than 2MB');
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file');
+        return;
+      }
+
+      setAvatarFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -136,6 +169,12 @@ export default function UsersPage() {
       
       const method = editingUser ? 'PUT' : 'POST';
       
+      // Prepare avatar URL (use preview if new file uploaded, otherwise keep existing)
+      let avatarUrl = formData.avatarUrl;
+      if (avatarFile && avatarPreview) {
+        avatarUrl = avatarPreview; // base64 encoded image
+      }
+
       const payload = {
         name: formData.name,
         email: formData.email,
@@ -143,6 +182,7 @@ export default function UsersPage() {
         status: formData.status,
         role: formData.role,
         joinDate: formData.joinDate || new Date().toISOString(),
+        avatarUrl: avatarUrl || null,
       };
 
       const response = await fetch(url, {
@@ -156,7 +196,9 @@ export default function UsersPage() {
         fetchUsers();
         setIsDialogOpen(false);
         setEditingUser(null);
-        setFormData({ name: '', email: '', position: '', status: 'active', role: 'member', joinDate: '' });
+        setFormData({ name: '', email: '', position: '', status: 'active', role: 'member', joinDate: '', avatarUrl: '' });
+        setAvatarFile(null);
+        setAvatarPreview('');
       } else {
         const data = await response.json();
         toast.error(data.error || 'Failed to save user');
@@ -175,8 +217,11 @@ export default function UsersPage() {
       position: '', 
       status: 'active', 
       role: 'member',
-      joinDate: new Date().toISOString().split('T')[0]
+      joinDate: new Date().toISOString().split('T')[0],
+      avatarUrl: '',
     });
+    setAvatarFile(null);
+    setAvatarPreview('');
     setIsDialogOpen(true);
   };
 
@@ -301,6 +346,7 @@ export default function UsersPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
+                    <th className="text-left py-3 px-4 font-semibold">Avatar</th>
                     <th className="text-left py-3 px-4 font-semibold">Name</th>
                     <th className="text-left py-3 px-4 font-semibold">Email</th>
                     <th className="text-left py-3 px-4 font-semibold">Position</th>
@@ -313,6 +359,19 @@ export default function UsersPage() {
                 <tbody>
                   {filteredUsers.map((user) => (
                     <tr key={user.id} className="border-b border-border hover:bg-accent/20">
+                      <td className="py-3 px-4">
+                        {user.avatarUrl ? (
+                          <img 
+                            src={user.avatarUrl} 
+                            alt={user.name}
+                            className="w-10 h-10 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-semibold">
+                            {user.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </td>
                       <td className="py-3 px-4 font-medium">{user.name}</td>
                       <td className="py-3 px-4 text-muted-foreground">{user.email}</td>
                       <td className="py-3 px-4">{user.position || '-'}</td>
@@ -348,11 +407,40 @@ export default function UsersPage() {
 
       {/* Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="glass-card">
+        <DialogContent className="glass-card max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Avatar Upload */}
+            <div className="flex flex-col items-center gap-4">
+              <Label>Profile Picture</Label>
+              <div className="relative">
+                {avatarPreview ? (
+                  <img 
+                    src={avatarPreview} 
+                    alt="Avatar preview"
+                    className="w-24 h-24 rounded-full object-cover border-4 border-primary/20"
+                  />
+                ) : (
+                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-3xl font-semibold border-4 border-primary/20">
+                    <UserIcon className="w-12 h-12" />
+                  </div>
+                )}
+                <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-primary text-primary-foreground p-2 rounded-full cursor-pointer hover:bg-primary/90 transition-colors shadow-lg">
+                  <Upload className="w-4 h-4" />
+                  <input 
+                    id="avatar-upload"
+                    type="file" 
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-muted-foreground">Click the upload icon to change avatar (Max 2MB)</p>
+            </div>
+
             <div>
               <Label htmlFor="name">Name *</Label>
               <Input

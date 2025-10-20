@@ -14,25 +14,26 @@ import {
   Users,
   Tag,
   PanelLeftClose,
-  PanelLeftOpen } from
-'lucide-react';
+  PanelLeftOpen,
+  User as UserIcon
+} from 'lucide-react';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/button';
 
 const navigation = [
-{ name: 'Dashboard', href: '/', icon: LayoutDashboard },
-{ name: 'Tasks', href: '/tasks', icon: CheckSquare },
-{
-  name: 'Master',
-  icon: Menu,
-  adminOnly: true,
-  submenus: [
-  { name: 'User', href: '/users', icon: Users },
-  { name: 'Task Category', href: '/categories', icon: Tag }]
-
-},
-{ name: 'Reports', href: '/reports', icon: FileText }];
-
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Tasks', href: '/tasks', icon: CheckSquare },
+  {
+    name: 'Master',
+    icon: Menu,
+    adminOnly: true,
+    submenus: [
+      { name: 'User', href: '/users', icon: Users },
+      { name: 'Task Category', href: '/categories', icon: Tag }
+    ]
+  },
+  { name: 'Reports', href: '/reports', icon: FileText }
+];
 
 export function Navigation() {
   const pathname = usePathname();
@@ -69,11 +70,9 @@ export function Navigation() {
           size="icon"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           className="glass-card">
-
           {mobileMenuOpen ?
-          <X className="h-5 w-5" /> :
-
-          <Menu className="h-5 w-5" />
+            <X className="h-5 w-5" /> :
+            <Menu className="h-5 w-5" />
           }
         </Button>
       </div>
@@ -85,11 +84,9 @@ export function Navigation() {
           size="icon"
           onClick={() => setDesktopSidebarOpen(!desktopSidebarOpen)}
           className="glass-card">
-
           {desktopSidebarOpen ?
-          <PanelLeftClose className="h-5 w-5" /> :
-
-          <PanelLeftOpen className="h-5 w-5" />
+            <PanelLeftClose className="h-5 w-5" /> :
+            <PanelLeftOpen className="h-5 w-5" />
           }
         </Button>
       </div>
@@ -103,8 +100,8 @@ export function Navigation() {
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full',
           // Desktop behavior
           !desktopSidebarOpen && 'lg:-translate-x-full'
-        )}>
-
+        )}
+      >
         <GlassCard className="m-4 flex flex-col !w-[262px] !h-full">
           <div className="p-6 border-b border-border">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent !w-[121%] !h-[38px]">
@@ -127,7 +124,6 @@ export function Navigation() {
                     <button
                       onClick={() => setMasterMenuOpen(!masterMenuOpen)}
                       className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-all duration-200">
-
                       <div className="flex items-center gap-3">
                         <item.icon className="w-5 h-5" />
                         <span className="font-medium">{item.name}</span>
@@ -138,30 +134,29 @@ export function Navigation() {
                       )} />
                     </button>
                     {masterMenuOpen &&
-                    <div className="ml-4 mt-1 space-y-1">
+                      <div className="ml-4 mt-1 space-y-1">
                         {item.submenus.map((submenu) => {
-                        const isActive = pathname === submenu.href;
-                        return (
-                          <Link
-                            key={submenu.name}
-                            href={submenu.href}
-                            onClick={() => setMobileMenuOpen(false)}
-                            className={cn(
-                              'flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-200',
-                              isActive ?
-                              'bg-primary text-primary-foreground shadow-lg' :
-                              'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
-                            )}>
-
+                          const isActive = pathname === submenu.href;
+                          return (
+                            <Link
+                              key={submenu.name}
+                              href={submenu.href}
+                              onClick={() => setMobileMenuOpen(false)}
+                              className={cn(
+                                'flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-200',
+                                isActive ?
+                                  'bg-primary text-primary-foreground shadow-lg' :
+                                  'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+                              )}>
                               <submenu.icon className="w-4 h-4" />
                               <span className="text-sm font-medium">{submenu.name}</span>
-                            </Link>);
-
-                      })}
+                            </Link>
+                          );
+                        })}
                       </div>
                     }
-                  </div>);
-
+                  </div>
+                );
               } else {
                 // Regular menu item
                 const isActive = pathname === item.href;
@@ -173,23 +168,30 @@ export function Navigation() {
                     className={cn(
                       'flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200',
                       isActive ?
-                      'bg-primary text-primary-foreground shadow-lg' :
-                      'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+                        'bg-primary text-primary-foreground shadow-lg' :
+                        'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
                     )}>
-
                     <item.icon className="w-5 h-5" />
                     <span className="font-medium">{item.name}</span>
-                  </Link>);
-
+                  </Link>
+                );
               }
             })}
           </nav>
 
           <div className="p-4 border-t border-border">
             <div className="flex items-center gap-3 px-4 py-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-semibold">
-                {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
-              </div>
+              {currentUser?.avatarUrl ? (
+                <img 
+                  src={currentUser.avatarUrl} 
+                  alt={currentUser.name}
+                  className="w-10 h-10 rounded-full object-cover border-2 border-primary/20"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-semibold">
+                  {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+              )}
               <div>
                 <p className="text-sm font-medium">{currentUser?.name || 'User'}</p>
                 <p className="text-xs text-muted-foreground capitalize">{userRole}</p>
@@ -201,11 +203,10 @@ export function Navigation() {
 
       {/* Overlay for mobile */}
       {mobileMenuOpen &&
-      <div
-        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden"
-        onClick={() => setMobileMenuOpen(false)} />
-
+        <div
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)} />
       }
-    </>);
-
+    </>
+  );
 }

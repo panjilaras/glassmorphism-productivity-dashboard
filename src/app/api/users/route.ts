@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, position, status, role, joinDate } = body;
+    const { name, email, position, status, role, joinDate, avatarUrl } = body;
 
     // Validate required fields
     if (!name || typeof name !== 'string' || name.trim() === '') {
@@ -92,6 +92,7 @@ export async function POST(request: NextRequest) {
         status: status || 'active',
         role: role || 'member',
         joinDate: joinDate || now,
+        avatarUrl: avatarUrl || null,
         createdAt: now,
         updatedAt: now,
       })
@@ -146,7 +147,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, email, position, status, role, joinDate } = body;
+    const { name, email, position, status, role, joinDate, avatarUrl } = body;
 
     // Prepare update data
     const updateData: any = {
@@ -187,6 +188,10 @@ export async function PUT(request: NextRequest) {
 
     if (joinDate !== undefined) {
       updateData.joinDate = joinDate;
+    }
+
+    if (avatarUrl !== undefined) {
+      updateData.avatarUrl = avatarUrl || null;
     }
 
     const updatedUser = await db

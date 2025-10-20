@@ -15,6 +15,13 @@
       "when": 1760846613211,
       "tag": "0001_natural_the_professor",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1760957163301,
+      "tag": "0002_fair_shocker",
+      "breakpoints": true
     }
   ]
 }
