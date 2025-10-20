@@ -30,6 +30,7 @@ export interface Task {
   priority: 'low' | 'medium' | 'high' | 'urgent';
   assignees: string[];
   dueDate: string;
+  createdAt?: string;
   category?: string;
   categoryColor?: string;
   points?: number;
@@ -77,7 +78,12 @@ export function TaskCard({ task, onEdit, onDelete, onStatusChange }: TaskCardPro
   const assignees = task.assignees || [];
 
   return (
-    <GlassCard className="p-6 glass-hover">
+    <GlassCard 
+      className="p-6 glass-hover"
+      style={{
+        borderLeft: task.categoryColor ? `4px solid ${task.categoryColor}` : undefined
+      }}
+    >
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-2">
           <Badge className={cn('font-medium', statusConfig[task.status].color)}>
@@ -115,7 +121,7 @@ export function TaskCard({ task, onEdit, onDelete, onStatusChange }: TaskCardPro
             className="w-6 h-6 rounded-lg flex items-center justify-center"
             style={{ backgroundColor: `${task.categoryColor || '#DDA0DD'}bb` }}
           >
-            <Tag className="w-3 h-3 text-gray-700" />
+            <Tag className="w-3 h-3 text-white" />
           </div>
           <span className="text-sm font-medium">{task.category}</span>
         </div>

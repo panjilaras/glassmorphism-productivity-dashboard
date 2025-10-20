@@ -12,7 +12,9 @@ import {
   X,
   ChevronDown,
   Users,
-  Tag
+  Tag,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/button';
@@ -35,6 +37,7 @@ const navigation = [
 export function Navigation() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = React.useState(true);
   const [masterMenuOpen, setMasterMenuOpen] = React.useState(true);
   const [currentUser, setCurrentUser] = React.useState<any>(null);
 
@@ -75,11 +78,31 @@ export function Navigation() {
         </Button>
       </div>
 
+      {/* Desktop sidebar toggle button */}
+      <div className="hidden lg:block fixed top-4 left-4 z-50">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setDesktopSidebarOpen(!desktopSidebarOpen)}
+          className="glass-card"
+        >
+          {desktopSidebarOpen ? (
+            <PanelLeftClose className="h-5 w-5" />
+          ) : (
+            <PanelLeftOpen className="h-5 w-5" />
+          )}
+        </Button>
+      </div>
+
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 ease-in-out lg:translate-x-0',
-          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          'fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 ease-in-out',
+          // Mobile behavior
+          'lg:translate-x-0',
+          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full',
+          // Desktop behavior
+          !desktopSidebarOpen && 'lg:-translate-x-full'
         )}
       >
         <GlassCard className="h-full m-4 flex flex-col">

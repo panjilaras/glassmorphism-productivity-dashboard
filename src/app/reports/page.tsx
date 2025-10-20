@@ -22,9 +22,12 @@ import {
   Filler,
 } from 'chart.js';
 import { Line, Bar, Doughnut, Radar } from 'react-chartjs-2';
-import { Download, Calendar, TrendingUp, Users, Clock, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Download, Calendar, TrendingUp, Users, Clock, CheckCircle2, RefreshCw, FileSpreadsheet, FileText } from 'lucide-react';
 import { MetricCard } from '@/components/MetricCard';
 import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 ChartJS.register(
   CategoryScale,
@@ -115,6 +118,166 @@ export default function ReportsPage() {
 
   const handleRefresh = () => {
     fetchAnalytics(true);
+  };
+
+  const handleExportExcel = () => {
+    try {
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      
+      // Summary sheet
+      const summaryData = [
+        ['Productivity Management System Report'],
+        ['Generated:', new Date().toLocaleString()],
+        ['Date Range:', dateRange],
+        [''],
+        ['Key Metrics'],
+        ['Total Tasks', metricsData.totalTasks],
+        ['Completed Tasks', metricsData.completedTasks],
+        ['Completion Rate', `${metricsData.completionRate}%`],
+        ['Total Points', metricsData.totalPoints],
+        ['Active Users', metricsData.activeUsers],
+        ['Avg Time/Task', metricsData.avgTimePerTask],
+      ];
+      const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+      
+      // Category breakdown sheet
+      const categoryData = [
+        ['Category', 'Tasks', 'Total Points', 'Avg Points', 'Completion Rate'],
+        ...analyticsData.categoryBreakdown.map((c: any) => [
+          c.name,
+          c.taskCount,
+          c.totalPoints,
+          c.avgPoints,
+          `${c.completionRate}%`
+        ])
+      ];
+      const categorySheet = XLSX.utils.aoa_to_sheet(categoryData);
+      XLSX.utils.book_append_sheet(wb, categorySheet, 'Categories');
+      
+      // Priority distribution sheet
+      const priorityData = [
+        ['Priority', 'Task Count'],
+        ['Low', analyticsData.priorityDistribution.low],
+        ['Medium', analyticsData.priorityDistribution.medium],
+        ['High', analyticsData.priorityDistribution.high],
+        ['Urgent', analyticsData.priorityDistribution.urgent],
+      ];
+      const prioritySheet = XLSX.utils.aoa_to_sheet(priorityData);
+      XLSX.utils.book_append_sheet(wb, prioritySheet, 'Priority Distribution');
+      
+      // Write file
+      XLSX.writeFile(wb, `productivity-report-${Date.now()}.xlsx`);
+      toast.success('Excel report exported successfully');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export Excel report');
+    }
+  };
+
+  const handleExportCSV = () => {
+    try {
+      let csvContent = 'Productivity Management System Report\n';
+      csvContent += `Generated:,${new Date().toLocaleString()}\n`;
+      csvContent += `Date Range:,${dateRange}\n\n`;
+      
+      csvContent += 'Key Metrics\n';
+      csvContent += `Total Tasks,${metricsData.totalTasks}\n`;
+      csvContent += `Completed Tasks,${metricsData.completedTasks}\n`;
+      csvContent += `Completion Rate,${metricsData.completionRate}%\n`;
+      csvContent += `Total Points,${metricsData.totalPoints}\n`;
+      csvContent += `Active Users,${metricsData.activeUsers}\n`;
+      csvContent += `Avg Time/Task,${metricsData.avgTimePerTask}\n\n`;
+      
+      csvContent += 'Category Breakdown\n';
+      csvContent += 'Category,Tasks,Total Points,Avg Points,Completion Rate\n';
+      analyticsData.categoryBreakdown.forEach((c: any) => {
+        csvContent += `${c.name},${c.taskCount},${c.totalPoints},${c.avgPoints},${c.completionRate}%\n`;
+      });
+      
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `productivity-report-${Date.now()}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('CSV report exported successfully');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export CSV report');
+    }
+  };
+
+  const handleExportPDF = () => {
+    try {
+      const doc = new jsPDF();
+      
+      // Title
+      doc.setFontSize(20);
+      doc.text('Productivity Management System', 14, 20);
+      doc.setFontSize(12);
+      doc.text(`Report Generated: ${new Date().toLocaleString()}`, 14, 28);
+      doc.text(`Date Range: ${dateRange}`, 14, 34);
+      
+      // Key Metrics
+      doc.setFontSize(16);
+      doc.text('Key Metrics', 14, 46);
+      
+      autoTable(doc, {
+        startY: 50,
+        head: [['Metric', 'Value']],
+        body: [
+          ['Total Tasks', metricsData.totalTasks],
+          ['Completed Tasks', metricsData.completedTasks],
+          ['Completion Rate', `${metricsData.completionRate}%`],
+          ['Total Points', metricsData.totalPoints],
+          ['Active Users', metricsData.activeUsers],
+          ['Avg Time/Task', metricsData.avgTimePerTask],
+        ],
+      });
+      
+      // Category Breakdown
+      doc.setFontSize(16);
+      doc.text('Category Performance', 14, (doc as any).lastAutoTable.finalY + 10);
+      
+      autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 15,
+        head: [['Category', 'Tasks', 'Total Points', 'Avg Points', 'Completion Rate']],
+        body: analyticsData.categoryBreakdown.map((c: any) => [
+          c.name,
+          c.taskCount,
+          c.totalPoints,
+          c.avgPoints,
+          `${c.completionRate}%`
+        ]),
+      });
+      
+      // Priority Distribution
+      doc.setFontSize(16);
+      doc.text('Priority Distribution', 14, (doc as any).lastAutoTable.finalY + 10);
+      
+      autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 15,
+        head: [['Priority', 'Task Count']],
+        body: [
+          ['Low', analyticsData.priorityDistribution.low],
+          ['Medium', analyticsData.priorityDistribution.medium],
+          ['High', analyticsData.priorityDistribution.high],
+          ['Urgent', analyticsData.priorityDistribution.urgent],
+        ],
+      });
+      
+      // Save
+      doc.save(`productivity-report-${Date.now()}.pdf`);
+      toast.success('PDF report exported successfully');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export PDF report');
+    }
   };
 
   if (loading || !analyticsData || !metricsData) {
@@ -220,7 +383,7 @@ export default function ReportsPage() {
           analyticsData.performanceMetrics.onTimeDelivery,
           analyticsData.performanceMetrics.qualityScore,
           analyticsData.performanceMetrics.collaboration,
-          analyticsData.performanceMetrics.pointsAverage * 10, // Scale to 0-100
+          analyticsData.performanceMetrics.pointsAverage * 10,
           analyticsData.performanceMetrics.efficiency,
         ],
         backgroundColor: 'rgba(168, 135, 255, 0.2)',
@@ -250,31 +413,6 @@ export default function ReportsPage() {
     },
   };
 
-  const handleExport = (format: string) => {
-    const reportData = {
-      dateRange,
-      reportType,
-      categoryFilter,
-      metrics: metricsData,
-      analytics: analyticsData,
-      timestamp: new Date().toISOString(),
-    };
-
-    const dataStr = format === 'json' 
-      ? JSON.stringify(reportData, null, 2)
-      : `Report Generated: ${new Date().toLocaleString()}\nDate Range: ${dateRange}\nReport Type: ${reportType}\n\nMetrics:\n- Total Tasks: ${metricsData.totalTasks}\n- Completed: ${metricsData.completedTasks}\n- Total Points: ${metricsData.totalPoints}\n- Active Users: ${metricsData.activeUsers}\n\nCategory Breakdown:\n${analyticsData.categoryBreakdown.map((c: any) => `- ${c.name}: ${c.taskCount} tasks, ${c.totalPoints} points, ${c.completionRate}% completion`).join('\n')}`;
-
-    const blob = new Blob([dataStr], { type: format === 'json' ? 'application/json' : 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `productivity-report-${Date.now()}.${format === 'json' ? 'json' : 'txt'}`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <div className="min-h-screen">
       <Navigation />
@@ -287,7 +425,7 @@ export default function ReportsPage() {
               <h1 className="text-4xl font-bold mb-2">Reports & Analytics</h1>
               <p className="text-muted-foreground">Comprehensive insights with real-time data</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button 
                 onClick={handleRefresh} 
                 variant="outline" 
@@ -297,13 +435,17 @@ export default function ReportsPage() {
                 <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
-              <Button onClick={() => handleExport('json')} variant="outline" className="glass-card">
-                <Download className="w-4 h-4 mr-2" />
-                Export JSON
+              <Button onClick={handleExportExcel} variant="outline" className="glass-card">
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Excel
               </Button>
-              <Button onClick={() => handleExport('csv')} className="shadow-lg">
+              <Button onClick={handleExportCSV} variant="outline" className="glass-card">
+                <FileText className="w-4 h-4 mr-2" />
+                CSV
+              </Button>
+              <Button onClick={handleExportPDF} className="shadow-lg">
                 <Download className="w-4 h-4 mr-2" />
-                Export Report
+                PDF
               </Button>
             </div>
           </div>
@@ -495,15 +637,15 @@ export default function ReportsPage() {
               </p>
             </GlassCard>
             <GlassCard gradient={2}>
-              <h3 className="text-lg font-semibold mb-2">📈 Points System</h3>
+              <h3 className="text-lg font-semibold mb-2">📊 Export Options</h3>
               <p className="text-sm text-muted-foreground">
-                All assignees receive full points for completed tasks. Rankings show total accumulated points per user.
+                Export comprehensive reports in Excel, CSV, or PDF format with all metrics and category breakdowns.
               </p>
             </GlassCard>
             <GlassCard gradient={3}>
               <h3 className="text-lg font-semibold mb-2">✨ Performance Insights</h3>
               <p className="text-sm text-muted-foreground">
-                Track completion rates, on-time delivery, and efficiency metrics across all categories and time periods.
+                Track completion rates (excluding cancelled tasks), on-time delivery, and efficiency metrics.
               </p>
             </GlassCard>
           </div>

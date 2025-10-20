@@ -15,8 +15,10 @@ export async function GET(request: NextRequest) {
       highPriorityTasksResult,
       completedTasksData
     ] = await Promise.all([
-      // Total tasks count
-      db.select({ count: sql<number>`count(*)` }).from(tasks),
+      // Total tasks count (excluding cancelled)
+      db.select({ count: sql<number>`count(*)` })
+        .from(tasks)
+        .where(sql`${tasks.status} != 'cancelled'`),
       
       // Active tasks count (not completed and not cancelled)
       db.select({ count: sql<number>`count(*)` })
@@ -62,7 +64,7 @@ export async function GET(request: NextRequest) {
     const totalPoints = Number(totalPointsResult[0]?.total || 0);
     const highPriorityTasks = Number(highPriorityTasksResult[0]?.count || 0);
 
-    // Calculate completion rate
+    // Calculate completion rate (excluding cancelled tasks)
     const completionRate = totalTasks > 0 
       ? Math.round((completedTasks / totalTasks) * 1000) / 10 
       : 0;

@@ -6,7 +6,7 @@ import { TaskCard, Task } from '@/components/TaskCard';
 import { TaskDialog } from '@/components/TaskDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, Filter } from 'lucide-react';
+import { Plus, Search, Filter, Calendar } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { toast } from 'sonner';
@@ -20,6 +20,7 @@ export default function TasksPage() {
   const [statusFilter, setStatusFilter] = React.useState<string>('all');
   const [priorityFilter, setPriorityFilter] = React.useState<string>('all');
   const [categoryFilter, setCategoryFilter] = React.useState<string>('all');
+  const [dateRange, setDateRange] = React.useState<string>('30days');
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingTask, setEditingTask] = React.useState<Task | null>(null);
 
@@ -28,7 +29,7 @@ export default function TasksPage() {
     try {
       setLoading(true);
       const [tasksRes, categoriesRes, usersRes] = await Promise.all([
-        fetch('/api/tasks?limit=100'),
+        fetch('/api/tasks?limit=1000'),
         fetch('/api/task-categories?limit=100'),
         fetch('/api/users?limit=100')
       ]);
@@ -84,6 +85,29 @@ export default function TasksPage() {
   React.useEffect(() => {
     let filtered = tasks;
 
+    // Date range filter
+    if (dateRange !== 'all') {
+      const now = new Date();
+      const cutoffDate = new Date();
+      
+      switch (dateRange) {
+        case '7days':
+          cutoffDate.setDate(now.getDate() - 7);
+          break;
+        case '30days':
+          cutoffDate.setDate(now.getDate() - 30);
+          break;
+        case '90days':
+          cutoffDate.setDate(now.getDate() - 90);
+          break;
+      }
+      
+      filtered = filtered.filter(task => {
+        const taskDate = new Date(task.createdAt || task.dueDate);
+        return taskDate >= cutoffDate;
+      });
+    }
+
     if (searchQuery) {
       filtered = filtered.filter(task =>
         task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -104,7 +128,7 @@ export default function TasksPage() {
     }
 
     setFilteredTasks(filtered);
-  }, [searchQuery, statusFilter, priorityFilter, categoryFilter, tasks]);
+  }, [searchQuery, statusFilter, priorityFilter, categoryFilter, dateRange, tasks]);
 
   const handleSaveTask = async (taskData: Omit<Task, 'id'> & { id?: number }) => {
     try {
@@ -226,7 +250,7 @@ export default function TasksPage() {
 
           {/* Filters */}
           <GlassCard>
-            <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex flex-col gap-4">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
@@ -238,6 +262,19 @@ export default function TasksPage() {
               </div>
               
               <div className="flex gap-2 flex-wrap">
+                <Select value={dateRange} onValueChange={setDateRange}>
+                  <SelectTrigger className="w-[150px] glass-card">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder="Date Range" />
+                  </SelectTrigger>
+                  <SelectContent className="glass-card">
+                    <SelectItem value="7days">Last 7 Days</SelectItem>
+                    <SelectItem value="30days">Last 30 Days</SelectItem>
+                    <SelectItem value="90days">Last 90 Days</SelectItem>
+                    <SelectItem value="all">All Time</SelectItem>
+                  </SelectContent>
+                </Select>
+
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-[150px] glass-card">
                     <Filter className="w-4 h-4 mr-2" />
@@ -302,6 +339,12 @@ export default function TasksPage() {
               <p className="text-2xl font-bold text-gray-500">{tasks.filter(t => t.status === 'cancelled').length}</p>
               <p className="text-sm text-muted-foreground">Cancelled</p>
             </GlassCard>
+          </div>
+
+          {/* Results Info */}
+          <div className="text-sm text-muted-foreground">
+            Showing {filteredTasks.length} of {tasks.length} tasks
+            {dateRange !== 'all' && ` (${dateRange === '7days' ? 'Last 7 days' : dateRange === '30days' ? 'Last 30 days' : 'Last 90 days'})`}
           </div>
 
           {/* Tasks Grid */}
