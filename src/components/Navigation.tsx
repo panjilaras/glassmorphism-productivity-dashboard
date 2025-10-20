@@ -23,6 +23,7 @@ const navigation = [
   { 
     name: 'Master', 
     icon: Menu,
+    adminOnly: true,
     submenus: [
       { name: 'User', href: '/users', icon: Users },
       { name: 'Task Category', href: '/categories', icon: Tag },
@@ -35,6 +36,26 @@ export function Navigation() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [masterMenuOpen, setMasterMenuOpen] = React.useState(true);
+  const [currentUser, setCurrentUser] = React.useState<any>(null);
+
+  // Fetch current user to determine role
+  React.useEffect(() => {
+    async function fetchCurrentUser() {
+      try {
+        const response = await fetch('/api/users?limit=1');
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setCurrentUser(data[0]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch user:', error);
+      }
+    }
+    fetchCurrentUser();
+  }, []);
+
+  const userRole = currentUser?.role || 'member';
+  const isAdmin = userRole === 'admin';
 
   return (
     <>
@@ -71,6 +92,11 @@ export function Navigation() {
 
           <nav className="flex-1 p-4 space-y-2 overflow-y-auto scrollbar-thin">
             {navigation.map((item) => {
+              // Hide Master menu for non-admin users
+              if (item.adminOnly && !isAdmin) {
+                return null;
+              }
+
               if (item.submenus) {
                 // Master menu with submenus
                 return (
@@ -139,11 +165,11 @@ export function Navigation() {
           <div className="p-4 border-t border-border">
             <div className="flex items-center gap-3 px-4 py-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-semibold">
-                JD
+                {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
               </div>
               <div>
-                <p className="text-sm font-medium">John Doe</p>
-                <p className="text-xs text-muted-foreground">Administrator</p>
+                <p className="text-sm font-medium">{currentUser?.name || 'User'}</p>
+                <p className="text-xs text-muted-foreground capitalize">{userRole}</p>
               </div>
             </div>
           </div>

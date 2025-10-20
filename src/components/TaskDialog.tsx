@@ -126,6 +126,7 @@ export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps
     e.preventDefault();
     
     const taskData = {
+      ...(task ? { id: task.id } : {}),
       ...formData,
       assigneeIds: selectedAssignees.length > 0 ? selectedAssignees.join(',') : null,
       dueDate: formData.dueDate ? new Date(formData.dueDate).toISOString() : new Date().toISOString(),

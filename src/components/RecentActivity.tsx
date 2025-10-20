@@ -6,7 +6,7 @@ import { CheckCircle2, Clock, AlertCircle, UserPlus, Loader2 } from 'lucide-reac
 import { cn } from '@/lib/utils';
 
 interface Activity {
-  id: number;
+  id: string;
   type: string;
   user: string;
   action: string;
@@ -18,46 +18,111 @@ export function RecentActivity() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchActivities() {
-      try {
-        // Fetch recent tasks to build activity feed
-        const tasksRes = await fetch('/api/tasks');
-        const tasksData = await tasksRes.json();
-        
-        if (tasksData.success && Array.isArray(tasksData.data)) {
-          // Convert tasks to activities
-          const taskActivities = tasksData.data
-            .sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-            .slice(0, 6)
-            .map((task: any, index: number) => {
-              const assignee = Array.isArray(task.assignees) && task.assignees.length > 0 
-                ? task.assignees[0] 
-                : 'Unknown';
-              
-              const timeAgo = getTimeAgo(new Date(task.updated_at));
-              
-              return {
-                id: task.id,
-                type: task.status === 'completed' ? 'completed' : 'created',
-                user: assignee,
-                action: task.status === 'completed' ? 'completed task' : 'working on',
-                task: task.title,
-                time: timeAgo,
-              };
-            });
-          
-          setActivities(taskActivities);
-        }
-      } catch (error) {
-        console.error('Failed to fetch activities:', error);
-      } finally {
-        setLoading(false);
+  const fetchActivities = React.useCallback(async () => {
+    try {
+      // Fetch recent tasks, users, and categories
+      const [tasksRes, usersRes, categoriesRes] = await Promise.all([
+        fetch('/api/tasks?limit=100'),
+        fetch('/api/users?limit=100'),
+        fetch('/api/task-categories?limit=100')
+      ]);
+      
+      const tasksData = await tasksRes.json();
+      const usersData = await usersRes.json();
+      const categoriesData = await categoriesRes.json();
+      
+      const allActivities: Activity[] = [];
+      
+      // Build user map for assignee names
+      const userMap = new Map(Array.isArray(usersData) ? usersData.map((u: any) => [u.id, u.name]) : []);
+      
+      // Add task activities
+      if (Array.isArray(tasksData)) {
+        const taskActivities = tasksData
+          .sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+          .slice(0, 4)
+          .map((task: any) => {
+            let assigneeName = 'System';
+            if (task.assigneeIds) {
+              const ids = task.assigneeIds.split(',').map((id: string) => parseInt(id.trim())).filter((id: number) => !isNaN(id));
+              if (ids.length > 0) {
+                assigneeName = userMap.get(ids[0]) || 'Unknown User';
+              }
+            }
+            
+            const timeAgo = getTimeAgo(new Date(task.updatedAt));
+            
+            return {
+              id: `task-${task.id}`,
+              type: task.status === 'completed' ? 'completed' : 'created',
+              user: assigneeName,
+              action: task.status === 'completed' ? 'completed task' : 'updated task',
+              task: task.title,
+              time: timeAgo,
+            };
+          });
+        allActivities.push(...taskActivities);
       }
+      
+      // Add user activities
+      if (Array.isArray(usersData)) {
+        const userActivities = usersData
+          .sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+          .slice(0, 2)
+          .map((user: any) => ({
+            id: `user-${user.id}`,
+            type: 'user',
+            user: user.name,
+            action: 'joined the team',
+            task: '',
+            time: getTimeAgo(new Date(user.updatedAt)),
+          }));
+        allActivities.push(...userActivities);
+      }
+      
+      // Add category activities
+      if (Array.isArray(categoriesData)) {
+        const categoryActivities = categoriesData
+          .sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+          .slice(0, 2)
+          .map((cat: any) => ({
+            id: `category-${cat.id}`,
+            type: 'created',
+            user: 'System',
+            action: 'updated category',
+            task: cat.name,
+            time: getTimeAgo(new Date(cat.updatedAt)),
+          }));
+        allActivities.push(...categoryActivities);
+      }
+      
+      // Sort all activities by time and take top 8
+      const sortedActivities = allActivities
+        .sort((a, b) => {
+          const timeA = parseTimeAgo(a.time);
+          const timeB = parseTimeAgo(b.time);
+          return timeA - timeB;
+        })
+        .slice(0, 8);
+      
+      setActivities(sortedActivities);
+    } catch (error) {
+      console.error('Failed to fetch activities:', error);
+    } finally {
+      setLoading(false);
     }
-    
-    fetchActivities();
   }, []);
+
+  useEffect(() => {
+    fetchActivities();
+    
+    // Poll for updates every 30 seconds
+    const interval = setInterval(() => {
+      fetchActivities();
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [fetchActivities]);
 
   const getTimeAgo = (date: Date) => {
     const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
@@ -66,6 +131,19 @@ export function RecentActivity() {
     if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
     return `${Math.floor(seconds / 86400)} days ago`;
+  };
+
+  const parseTimeAgo = (timeStr: string): number => {
+    if (timeStr === 'just now') return 0;
+    const match = timeStr.match(/(\d+)\s+(minute|hour|day)/);
+    if (match) {
+      const value = parseInt(match[1]);
+      const unit = match[2];
+      if (unit === 'minute') return value;
+      if (unit === 'hour') return value * 60;
+      if (unit === 'day') return value * 60 * 24;
+    }
+    return 999999;
   };
 
   const getActivityIcon = (type: string) => {

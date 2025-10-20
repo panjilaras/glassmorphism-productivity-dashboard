@@ -48,7 +48,8 @@ const statusConfig = {
 
 const roleConfig = {
   admin: { label: 'Admin', color: 'bg-purple-500/20 text-purple-700 dark:text-purple-400' },
-  member: { label: 'Member', color: 'bg-blue-500/20 text-blue-700 dark:text-blue-400' },
+  manager: { label: 'Manager', color: 'bg-blue-500/20 text-blue-700 dark:text-blue-400' },
+  member: { label: 'Member', color: 'bg-green-500/20 text-green-700 dark:text-green-400' },
 };
 
 export default function UsersPage() {
@@ -66,15 +67,15 @@ export default function UsersPage() {
     position: '',
     status: 'active' as const,
     role: 'member' as const,
+    joinDate: '',
   });
 
   // Fetch users from API
   const fetchUsers = React.useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/users');
+      const response = await fetch('/api/users?limit=100');
       const data = await response.json();
-      // API returns plain array, not wrapped in { success, data }
       if (Array.isArray(data)) {
         setUsers(data);
       }
@@ -91,17 +92,26 @@ export default function UsersPage() {
   }, [fetchUsers]);
 
   React.useEffect(() => {
+    let filtered = users;
+
     if (searchQuery) {
-      const filtered = users.filter(user =>
+      filtered = filtered.filter(user =>
         user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (user.position && user.position.toLowerCase().includes(searchQuery.toLowerCase()))
       );
-      setFilteredUsers(filtered);
-    } else {
-      setFilteredUsers(users);
     }
-  }, [searchQuery, users]);
+
+    if (roleFilter !== 'all') {
+      filtered = filtered.filter(user => user.role === roleFilter);
+    }
+
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(user => user.status === statusFilter);
+    }
+
+    setFilteredUsers(filtered);
+  }, [searchQuery, roleFilter, statusFilter, users]);
 
   const handleEdit = (user: User) => {
     setEditingUser(user);
@@ -111,6 +121,7 @@ export default function UsersPage() {
       position: user.position || '',
       status: user.status,
       role: user.role || 'member',
+      joinDate: user.joinDate ? new Date(user.joinDate).toISOString().split('T')[0] : '',
     });
     setIsDialogOpen(true);
   };
@@ -131,7 +142,7 @@ export default function UsersPage() {
         position: formData.position || null,
         status: formData.status,
         role: formData.role,
-        ...(editingUser ? {} : { joinDate: new Date().toISOString() }),
+        joinDate: formData.joinDate || new Date().toISOString(),
       };
 
       const response = await fetch(url, {
@@ -141,19 +152,31 @@ export default function UsersPage() {
       });
 
       if (response.ok) {
+        toast.success(editingUser ? 'User updated successfully' : 'User created successfully');
         fetchUsers();
         setIsDialogOpen(false);
         setEditingUser(null);
-        setFormData({ name: '', email: '', position: '', status: 'active', role: 'member' });
+        setFormData({ name: '', email: '', position: '', status: 'active', role: 'member', joinDate: '' });
+      } else {
+        const data = await response.json();
+        toast.error(data.error || 'Failed to save user');
       }
     } catch (error) {
       console.error('Failed to save user:', error);
+      toast.error('Failed to save user');
     }
   };
 
   const openCreateDialog = () => {
     setEditingUser(null);
-    setFormData({ name: '', email: '', position: '', status: 'active', role: 'member' });
+    setFormData({ 
+      name: '', 
+      email: '', 
+      position: '', 
+      status: 'active', 
+      role: 'member',
+      joinDate: new Date().toISOString().split('T')[0]
+    });
     setIsDialogOpen(true);
   };
 
@@ -215,6 +238,7 @@ export default function UsersPage() {
               <SelectContent className="glass-card">
                 <SelectItem value="all">All Roles</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="manager">Manager</SelectItem>
                 <SelectItem value="member">Member</SelectItem>
               </SelectContent>
             </Select>
@@ -239,15 +263,15 @@ export default function UsersPage() {
               gradient={1}
             />
             <MetricCard
-              title="Active"
-              value={users.filter(u => u.status === 'active').length}
-              icon={UserCheck}
-              gradient={2}
-            />
-            <MetricCard
               title="Admins"
               value={users.filter(u => u.role === 'admin').length}
               icon={Shield}
+              gradient={2}
+            />
+            <MetricCard
+              title="Managers"
+              value={users.filter(u => u.role === 'manager').length}
+              icon={UserCheck}
               gradient={3}
             />
             <MetricCard
@@ -361,12 +385,13 @@ export default function UsersPage() {
             </div>
             <div>
               <Label htmlFor="role">Role</Label>
-              <Select value={formData.role} onValueChange={(value: 'admin' | 'member') => setFormData({ ...formData, role: value })}>
+              <Select value={formData.role} onValueChange={(value: 'admin' | 'manager' | 'member') => setFormData({ ...formData, role: value })}>
                 <SelectTrigger className="glass-card">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="glass-card">
                   <SelectItem value="member">Member</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
@@ -382,6 +407,17 @@ export default function UsersPage() {
                   <SelectItem value="inactive">Inactive</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label htmlFor="joinDate">Join Date *</Label>
+              <Input
+                id="joinDate"
+                type="date"
+                value={formData.joinDate}
+                onChange={(e) => setFormData({ ...formData, joinDate: e.target.value })}
+                className="glass-card"
+                required
+              />
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>

@@ -22,8 +22,9 @@ import {
   Filler,
 } from 'chart.js';
 import { Line, Bar, Doughnut, Radar } from 'react-chartjs-2';
-import { Download, Calendar, TrendingUp, Users, Clock, CheckCircle2 } from 'lucide-react';
+import { Download, Calendar, TrendingUp, Users, Clock, CheckCircle2, RefreshCw } from 'lucide-react';
 import { MetricCard } from '@/components/MetricCard';
+import { toast } from 'sonner';
 
 ChartJS.register(
   CategoryScale,
@@ -68,33 +69,53 @@ export default function ReportsPage() {
   const [reportType, setReportType] = React.useState('overview');
   const [categoryFilter, setCategoryFilter] = React.useState('all');
   const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
   const [analyticsData, setAnalyticsData] = React.useState<any>(null);
   const [metricsData, setMetricsData] = React.useState<any>(null);
 
   // Fetch analytics data
-  React.useEffect(() => {
-    async function fetchAnalytics() {
-      try {
-        setLoading(true);
-        const [analyticsRes, metricsRes] = await Promise.all([
-          fetch('/api/reports/analytics'),
-          fetch('/api/dashboard/metrics')
-        ]);
-        
-        const analytics = await analyticsRes.json();
-        const metrics = await metricsRes.json();
-        
-        setAnalyticsData(analytics);
-        setMetricsData(metrics);
-      } catch (error) {
-        console.error('Failed to fetch analytics:', error);
-      } finally {
-        setLoading(false);
+  const fetchAnalytics = React.useCallback(async (showToast = false) => {
+    try {
+      if (showToast) setRefreshing(true);
+      else setLoading(true);
+      
+      const [analyticsRes, metricsRes] = await Promise.all([
+        fetch('/api/reports/analytics'),
+        fetch('/api/dashboard/metrics')
+      ]);
+      
+      const analytics = await analyticsRes.json();
+      const metrics = await metricsRes.json();
+      
+      setAnalyticsData(analytics);
+      setMetricsData(metrics);
+      
+      if (showToast) {
+        toast.success('Data refreshed successfully');
       }
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error);
+      toast.error('Failed to load analytics');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-    
-    fetchAnalytics();
   }, []);
+
+  React.useEffect(() => {
+    fetchAnalytics();
+    
+    // Auto-refresh every 60 seconds
+    const interval = setInterval(() => {
+      fetchAnalytics();
+    }, 60000);
+    
+    return () => clearInterval(interval);
+  }, [fetchAnalytics]);
+
+  const handleRefresh = () => {
+    fetchAnalytics(true);
+  };
 
   if (loading || !analyticsData || !metricsData) {
     return (
@@ -267,6 +288,15 @@ export default function ReportsPage() {
               <p className="text-muted-foreground">Comprehensive insights with real-time data</p>
             </div>
             <div className="flex gap-2">
+              <Button 
+                onClick={handleRefresh} 
+                variant="outline" 
+                className="glass-card"
+                disabled={refreshing}
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
               <Button onClick={() => handleExport('json')} variant="outline" className="glass-card">
                 <Download className="w-4 h-4 mr-2" />
                 Export JSON
