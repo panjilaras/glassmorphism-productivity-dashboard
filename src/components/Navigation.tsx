@@ -30,7 +30,7 @@ const navigation = [
   {
     name: 'Master',
     icon: Menu,
-    adminOnly: true,
+    adminOnly: false,
     submenus: [
       { name: 'User', href: '/users', icon: Users },
       { name: 'Task Category', href: '/categories', icon: Tag }
