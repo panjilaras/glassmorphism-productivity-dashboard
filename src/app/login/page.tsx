@@ -5,7 +5,11 @@ import { authClient, useSession } from '@/lib/auth-client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import Link from 'next/link';
-import { Mail, Lock, LogIn } from 'lucide-react';
+import { Mail, Lock, LogIn, KeyRound } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 function LoginForm() {
   const router = useRouter();
@@ -16,6 +20,13 @@ function LoginForm() {
     email: '',
     password: '',
     rememberMe: false
+  });
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetFormData, setResetFormData] = useState({
+    email: '',
+    newPassword: '',
+    confirmPassword: ''
   });
 
   useEffect(() => {
@@ -55,6 +66,56 @@ function LoginForm() {
       toast.error('An error occurred. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (resetFormData.newPassword !== resetFormData.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    if (resetFormData.newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters long');
+      return;
+    }
+
+    const hasUpperCase = /[A-Z]/.test(resetFormData.newPassword);
+    const hasLowerCase = /[a-z]/.test(resetFormData.newPassword);
+    const hasNumber = /[0-9]/.test(resetFormData.newPassword);
+
+    if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+      toast.error('Password must contain uppercase, lowercase, and number');
+      return;
+    }
+
+    setResetLoading(true);
+
+    try {
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: resetFormData.email,
+          newPassword: resetFormData.newPassword
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success('Password reset successfully! You can now log in with your new password.');
+        setResetDialogOpen(false);
+        setResetFormData({ email: '', newPassword: '', confirmPassword: '' });
+      } else {
+        toast.error(data.error || 'Failed to reset password');
+      }
+    } catch (error) {
+      toast.error('An error occurred. Please try again.');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -119,17 +180,26 @@ function LoginForm() {
               </div>
             </div>
 
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="rememberMe"
-                checked={formData.rememberMe}
-                onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
-                className="w-4 h-4 rounded border-border focus:ring-2 focus:ring-primary/20"
-              />
-              <label htmlFor="rememberMe" className="ml-2 text-sm text-muted-foreground">
-                Remember me
-              </label>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="rememberMe"
+                  checked={formData.rememberMe}
+                  onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
+                  className="w-4 h-4 rounded border-border focus:ring-2 focus:ring-primary/20"
+                />
+                <label htmlFor="rememberMe" className="ml-2 text-sm text-muted-foreground">
+                  Remember me
+                </label>
+              </div>
+              <button
+                type="button"
+                onClick={() => setResetDialogOpen(true)}
+                className="text-sm text-primary hover:underline font-medium"
+              >
+                Forgot password?
+              </button>
             </div>
 
             <button
@@ -152,6 +222,73 @@ function LoginForm() {
           </div>
         </div>
       </div>
+
+      {/* Password Reset Dialog */}
+      <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+        <DialogContent className="glass-card">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="w-5 h-5 text-primary" />
+              Reset Password
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleResetPassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="reset-email">Email</Label>
+              <Input
+                id="reset-email"
+                type="email"
+                value={resetFormData.email}
+                onChange={(e) => setResetFormData({ ...resetFormData, email: e.target.value })}
+                placeholder="Enter your email"
+                className="glass-card"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New Password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={resetFormData.newPassword}
+                onChange={(e) => setResetFormData({ ...resetFormData, newPassword: e.target.value })}
+                placeholder="Enter new password (min. 8 characters)"
+                className="glass-card"
+                autoComplete="off"
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Must contain uppercase, lowercase, and number
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirm Password</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                value={resetFormData.confirmPassword}
+                onChange={(e) => setResetFormData({ ...resetFormData, confirmPassword: e.target.value })}
+                placeholder="Confirm new password"
+                className="glass-card"
+                autoComplete="off"
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setResetDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={resetLoading}>
+                {resetLoading ? 'Resetting...' : 'Reset Password'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Search, MoreVertical, Edit, Trash2, Shield, UserCheck, Upload, User as UserIcon } from 'lucide-react';
+import { Plus, Search, MoreVertical, Edit, Trash2, Shield, UserCheck, Upload, User as UserIcon, Key } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
@@ -243,6 +243,34 @@ export default function UsersPage() {
     }
   };
 
+  const handleSetDefaultPassword = async (user: User) => {
+    try {
+      const response = await fetch('/api/users/set-default-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          name: user.name,
+          role: user.role
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(
+          `Default password set for ${user.name}. Password: ${data.defaultPassword}`,
+          { duration: 8000 }
+        );
+      } else {
+        toast.error(data.error || 'Failed to set default password');
+      }
+    } catch (error) {
+      console.error('Failed to set default password:', error);
+      toast.error('Failed to set default password');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen">
@@ -389,6 +417,14 @@ export default function UsersPage() {
                         {user.joinDate ? new Date(user.joinDate).toLocaleDateString() : new Date(user.createdAt).toLocaleDateString()}
                       </td>
                       <td className="py-3 px-4 text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleSetDefaultPassword(user)}
+                          title="Set default password (Summitoto_456)"
+                        >
+                          <Key className="w-4 h-4 text-primary" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(user)}>
                           <Edit className="w-4 h-4" />
                         </Button>

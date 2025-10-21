@@ -54,6 +54,25 @@ export default function RegisterPage() {
         return;
       }
 
+      // Sync user to Master Users table with default role
+      if (data?.user) {
+        try {
+          await fetch('/api/users/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: data.user.id,
+              name: data.user.name,
+              email: data.user.email,
+              role: 'member',
+              image: data.user.image
+            }),
+          });
+        } catch (syncError) {
+          console.error('Failed to sync user to Master Users:', syncError);
+        }
+      }
+
       toast.success('Account created successfully! Redirecting to login...');
       setTimeout(() => {
         router.push('/login?registered=true');
