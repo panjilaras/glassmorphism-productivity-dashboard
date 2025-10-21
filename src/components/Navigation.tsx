@@ -49,33 +49,66 @@ export function Navigation() {
   const [currentUser, setCurrentUser] = React.useState<any>(null);
   const [loggingOut, setLoggingOut] = React.useState(false);
 
-  // Fetch current user from new API endpoint
-  React.useEffect(() => {
-    if (session?.user) {
-      async function fetchCurrentUser() {
-        try {
-          const token = localStorage.getItem("bearer_token");
-          const response = await fetch('/api/auth/current-user', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            setCurrentUser(data);
-          } else {
-            console.error('Failed to fetch current user');
-          }
-        } catch (error) {
-          console.error('Failed to fetch user:', error);
-        }
+  // Fetch current user from API endpoint
+  const fetchCurrentUser = React.useCallback(async () => {
+    if (!session?.user) {
+      setCurrentUser(null);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("bearer_token");
+      if (!token) {
+        setCurrentUser(null);
+        return;
       }
-      fetchCurrentUser();
-    } else {
+
+      const response = await fetch('/api/auth/current-user', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        cache: 'no-store'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentUser(data);
+      } else {
+        console.error('Failed to fetch current user');
+        setCurrentUser(null);
+      }
+    } catch (error) {
+      console.error('Failed to fetch user:', error);
       setCurrentUser(null);
     }
-  }, [session]);
+  }, [session?.user]);
+
+  // Refetch user whenever session changes
+  React.useEffect(() => {
+    fetchCurrentUser();
+  }, [fetchCurrentUser]);
+
+  // Listen for bearer token changes (when user logs in)
+  React.useEffect(() => {
+    const handleTokenChange = () => {
+      fetchCurrentUser();
+    };
+
+    window.addEventListener('bearer_token_changed', handleTokenChange);
+    return () => window.removeEventListener('bearer_token_changed', handleTokenChange);
+  }, [fetchCurrentUser]);
+
+  // Also refetch when window regains focus (user comes back after login)
+  React.useEffect(() => {
+    const handleFocus = () => {
+      if (session?.user) {
+        fetchCurrentUser();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [session?.user, fetchCurrentUser]);
 
   const handleSignOut = async () => {
     setLoggingOut(true);
@@ -94,6 +127,7 @@ export function Navigation() {
       setLoggingOut(false);
     } else {
       localStorage.removeItem("bearer_token");
+      setCurrentUser(null);
       refetch();
       toast.success('Logged out successfully');
       router.push('/login');

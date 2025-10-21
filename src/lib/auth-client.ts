@@ -1,4 +1,3 @@
-
 "use client"
 import { createAuthClient } from "better-auth/react"
 import { useEffect, useState } from "react"
@@ -14,6 +13,10 @@ export const authClient = createAuthClient({
           // Store the token securely (e.g., in localStorage)
           if(authToken){
             localStorage.setItem("bearer_token", authToken);
+            // Dispatch custom event to notify components that bearer token changed
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('bearer_token_changed', { detail: { token: authToken } }));
+            }
           }
       }
   }
