@@ -67,7 +67,7 @@ export default function UsersPage() {
     email: '',
     position: '',
     status: 'active' as const,
-    role: 'member' as const,
+    role: 'admin' as const,
     joinDate: '',
     avatarUrl: '',
   });
