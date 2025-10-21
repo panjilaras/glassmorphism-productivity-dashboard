@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
       id: authUser.id,
       email: authUser.email,
       name: authUser.name,
-      role: authUser.role,
+      role: masterUser.role, // Use role from Master Users table, not auth table
       status: masterUser.status,
       avatarUrl: masterUser.avatarUrl,
       position: masterUser.position,
