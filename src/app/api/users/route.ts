@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
         email: email.trim(),
         position: position || null,
         status: status || 'active',
-        role: role || 'member',
+        role: role || 'admin',
         joinDate: joinDate || now,
         avatarUrl: avatarUrl || null,
         createdAt: now,
