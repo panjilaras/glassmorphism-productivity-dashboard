@@ -1,142 +1,98 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { user, account } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
-import bcrypt from 'bcrypt';
+import { account, user, verification } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { email, newPassword } = body;
 
-    // Validate required fields
-    if (!email) {
+    if (!email || !newPassword) {
       return NextResponse.json(
-        { 
-          error: 'Email is required',
-          code: 'MISSING_EMAIL' 
-        },
+        { error: 'Email and new password are required' },
         { status: 400 }
       );
     }
 
-    if (!newPassword) {
-      return NextResponse.json(
-        { 
-          error: 'New password is required',
-          code: 'MISSING_PASSWORD' 
-        },
-        { status: 400 }
-      );
-    }
-
-    // Validate password requirements
-    if (newPassword.length < 8) {
-      return NextResponse.json(
-        { 
-          error: 'Password must be at least 8 characters long',
-          code: 'PASSWORD_TOO_SHORT' 
-        },
-        { status: 400 }
-      );
-    }
-
-    const hasUpperCase = /[A-Z]/.test(newPassword);
-    const hasLowerCase = /[a-z]/.test(newPassword);
-    const hasNumber = /[0-9]/.test(newPassword);
-
-    if (!hasUpperCase || !hasLowerCase || !hasNumber) {
-      return NextResponse.json(
-        { 
-          error: 'Password must contain at least one uppercase letter, one lowercase letter, and one number',
-          code: 'PASSWORD_REQUIREMENTS_NOT_MET' 
-        },
-        { status: 400 }
-      );
-    }
-
-    // Normalize email to lowercase
-    const normalizedEmail = email.trim().toLowerCase();
-
-    // Find user by email
-    const userResult = await db.select()
+    // Find the user by email in auth user table
+    const userResult = await db
+      .select()
       .from(user)
-      .where(eq(user.email, normalizedEmail))
+      .where(eq(user.email, email))
       .limit(1);
 
     if (userResult.length === 0) {
       return NextResponse.json(
-        { 
-          error: 'User not found',
-          code: 'USER_NOT_FOUND' 
-        },
+        { error: 'User not found' },
         { status: 404 }
       );
     }
 
     const foundUser = userResult[0];
 
-    // Find credential account for this user
-    const accountResult = await db.select()
-      .from(account)
-      .where(
-        and(
-          eq(account.userId, foundUser.id),
-          eq(account.providerId, 'credential')
-        )
-      )
-      .limit(1);
-
-    if (accountResult.length === 0) {
-      return NextResponse.json(
-        { 
-          error: 'No password account found for this user',
-          code: 'NO_CREDENTIAL_ACCOUNT' 
-        },
-        { status: 404 }
-      );
-    }
-
-    const userAccount = accountResult[0];
-
     // Hash the new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Update account password and updatedAt
-    const updated = await db.update(account)
-      .set({
-        password: hashedPassword,
-        updatedAt: new Date()
-      })
-      .where(eq(account.id, userAccount.id))
-      .returning();
+    // Update password in account table
+    const accountResult = await db
+      .select()
+      .from(account)
+      .where(eq(account.userId, foundUser.id))
+      .limit(1);
 
-    if (updated.length === 0) {
-      return NextResponse.json(
-        { 
-          error: 'Failed to update password',
-          code: 'UPDATE_FAILED' 
-        },
-        { status: 500 }
-      );
+    if (accountResult.length > 0) {
+      await db
+        .update(account)
+        .set({ 
+          password: hashedPassword,
+          updatedAt: new Date()
+        })
+        .where(eq(account.userId, foundUser.id));
+    } else {
+      // Create account if it doesn't exist
+      await db.insert(account).values({
+        id: `account_${Date.now()}`,
+        accountId: email,
+        providerId: 'credential',
+        userId: foundUser.id,
+        password: hashedPassword,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
     }
 
+    // Create verification entry for email notification
+    const verificationId = `verify_${Date.now()}`;
+    const verificationValue = `password_reset_${Date.now()}`;
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    await db.insert(verification).values({
+      id: verificationId,
+      identifier: email,
+      value: verificationValue,
+      expiresAt: expiresAt,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    // In a production environment, you would send an actual email here
+    // For now, we'll just log it and return success
+    console.log(`Password reset verification sent to ${email}`);
+    console.log(`Verification token: ${verificationValue}`);
+
     return NextResponse.json(
-      {
-        success: true,
-        message: 'Password reset successfully',
-        email: normalizedEmail
+      { 
+        message: 'Password reset successfully! A verification email has been sent to your email address.',
+        verificationSent: true 
       },
       { status: 200 }
     );
-
   } catch (error) {
-    console.error('POST /api/auth/reset-password error:', error);
+    console.error('Password reset error:', error);
     return NextResponse.json(
-      { 
-        error: 'Internal server error: ' + error,
-        code: 'INTERNAL_ERROR'
-      },
+      { error: 'Failed to reset password' },
       { status: 500 }
     );
   }

@@ -23,6 +23,32 @@ export default function TasksPage() {
   const [dateRange, setDateRange] = React.useState<string>('30days');
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingTask, setEditingTask] = React.useState<Task | null>(null);
+  const [currentUser, setCurrentUser] = React.useState<any>(null);
+
+  // Fetch current user role
+  React.useEffect(() => {
+    async function fetchCurrentUser() {
+      try {
+        const token = localStorage.getItem("bearer_token");
+        const response = await fetch('/api/auth/current-user', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setCurrentUser(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch current user:', error);
+      }
+    }
+    fetchCurrentUser();
+  }, []);
+
+  const userRole = currentUser?.role || 'member';
+  const canEdit = userRole === 'admin' || userRole === 'manager';
 
   // Fetch tasks and categories
   const fetchTasks = React.useCallback(async () => {
@@ -131,6 +157,11 @@ export default function TasksPage() {
   }, [searchQuery, statusFilter, priorityFilter, categoryFilter, dateRange, tasks]);
 
   const handleSaveTask = async (taskData: Omit<Task, 'id'> & { id?: number }) => {
+    if (!canEdit) {
+      toast.error('You do not have permission to perform this action');
+      return;
+    }
+
     try {
       if (taskData.id) {
         const response = await fetch(`/api/tasks?id=${taskData.id}`, {
@@ -167,6 +198,11 @@ export default function TasksPage() {
   };
 
   const handleDeleteTask = async (id: number) => {
+    if (!canEdit) {
+      toast.error('You do not have permission to perform this action');
+      return;
+    }
+
     try {
       const response = await fetch(`/api/tasks?id=${id}`, {
         method: 'DELETE',
@@ -185,6 +221,11 @@ export default function TasksPage() {
   };
 
   const handleStatusChange = async (id: number, status: Task['status']) => {
+    if (!canEdit) {
+      toast.error('You do not have permission to perform this action');
+      return;
+    }
+
     try {
       const task = tasks.find(t => t.id === id);
       if (!task) return;
@@ -208,11 +249,19 @@ export default function TasksPage() {
   };
 
   const handleEditTask = (task: Task) => {
+    if (!canEdit) {
+      toast.error('You do not have permission to edit tasks. Contact an admin or manager.');
+      return;
+    }
     setEditingTask(task);
     setDialogOpen(true);
   };
 
   const handleCreateTask = () => {
+    if (!canEdit) {
+      toast.error('You do not have permission to create tasks. Contact an admin or manager.');
+      return;
+    }
     setEditingTask(null);
     setDialogOpen(true);
   };
@@ -240,12 +289,16 @@ export default function TasksPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-4xl font-bold mb-2">Tasks</h1>
-              <p className="text-muted-foreground">Manage and track your team's tasks</p>
+              <p className="text-muted-foreground">
+                {canEdit ? 'Manage and track your team\'s tasks' : 'View team tasks'}
+              </p>
             </div>
-            <Button onClick={handleCreateTask} size="lg" className="shadow-lg">
-              <Plus className="w-5 h-5 mr-2" />
-              New Task
-            </Button>
+            {canEdit && (
+              <Button onClick={handleCreateTask} size="lg" className="shadow-lg">
+                <Plus className="w-5 h-5 mr-2" />
+                New Task
+              </Button>
+            )}
           </div>
 
           {/* Filters */}
@@ -345,6 +398,11 @@ export default function TasksPage() {
           <div className="text-sm text-muted-foreground">
             Showing {filteredTasks.length} of {tasks.length} tasks
             {dateRange !== 'all' && ` (${dateRange === '7days' ? 'Last 7 days' : dateRange === '30days' ? 'Last 30 days' : 'Last 90 days'})`}
+            {!canEdit && (
+              <span className="ml-2 text-amber-600 dark:text-amber-400 font-medium">
+                • View only mode (Member role)
+              </span>
+            )}
           </div>
 
           {/* Tasks Grid */}
@@ -357,6 +415,7 @@ export default function TasksPage() {
                   onEdit={handleEditTask}
                   onDelete={handleDeleteTask}
                   onStatusChange={handleStatusChange}
+                  userRole={userRole}
                 />
               ))}
             </div>

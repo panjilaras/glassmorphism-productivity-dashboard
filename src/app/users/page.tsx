@@ -192,6 +192,11 @@ export default function UsersPage() {
       });
 
       if (response.ok) {
+        // If editing and role changed, sync role to auth table
+        if (editingUser && editingUser.role !== formData.role) {
+          await syncRoleToAuth(formData.email, formData.role);
+        }
+        
         toast.success(editingUser ? 'User updated successfully' : 'User created successfully');
         fetchUsers();
         setIsDialogOpen(false);
@@ -206,6 +211,23 @@ export default function UsersPage() {
     } catch (error) {
       console.error('Failed to save user:', error);
       toast.error('Failed to save user');
+    }
+  };
+
+  // New function to sync role to auth table
+  const syncRoleToAuth = async (email: string, role: string) => {
+    try {
+      const response = await fetch('/api/auth/sync-role', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, role }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to sync role to auth table');
+      }
+    } catch (error) {
+      console.error('Failed to sync role:', error);
     }
   };
 

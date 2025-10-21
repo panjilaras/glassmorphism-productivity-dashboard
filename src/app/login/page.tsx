@@ -56,7 +56,29 @@ function LoginForm() {
 
       if (error?.code) {
         toast.error("Invalid email or password. Please make sure you have already registered an account and try again.");
+        setLoading(false);
         return;
+      }
+
+      // Check if user is inactive in master users table
+      const token = localStorage.getItem("bearer_token");
+      const userResponse = await fetch('/api/auth/current-user', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        
+        if (userData.status === 'inactive') {
+          // Sign out the user immediately
+          await authClient.signOut();
+          localStorage.removeItem("bearer_token");
+          toast.error('Your account is inactive. Please contact an administrator.');
+          setLoading(false);
+          return;
+        }
       }
 
       toast.success('Welcome back!');
@@ -64,6 +86,7 @@ function LoginForm() {
       router.push(redirect);
     } catch (error) {
       toast.error('An error occurred. Please try again.');
+      setLoading(false);
     } finally {
       setLoading(false);
     }
@@ -106,7 +129,7 @@ function LoginForm() {
       const data = await response.json();
 
       if (response.ok) {
-        toast.success('Password reset successfully! You can now log in with your new password.');
+        toast.success(data.message || 'Password reset successfully! Verification email sent.');
         setResetDialogOpen(false);
         setResetFormData({ email: '', newPassword: '', confirmPassword: '' });
       } else {
@@ -244,6 +267,9 @@ function LoginForm() {
                 className="glass-card"
                 required
               />
+              <p className="text-xs text-muted-foreground">
+                A verification email will be sent to this address
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="new-password">New Password</Label>

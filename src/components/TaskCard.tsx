@@ -41,6 +41,7 @@ interface TaskCardProps {
   onEdit: (task: Task) => void;
   onDelete: (id: number) => void;
   onStatusChange: (id: number, status: Task['status']) => void;
+  userRole?: string;
 }
 
 const statusConfig = {
@@ -65,7 +66,7 @@ const categoryColors: Record<string, string> = {
   'Other': '#DDA0DD',
 };
 
-export function TaskCard({ task, onEdit, onDelete, onStatusChange }: TaskCardProps) {
+export function TaskCard({ task, onEdit, onDelete, onStatusChange, userRole = 'member' }: TaskCardProps) {
   const getNextStatus = (): Task['status'] | null => {
     switch (task.status) {
       case 'todo': return 'in-progress';
@@ -76,6 +77,7 @@ export function TaskCard({ task, onEdit, onDelete, onStatusChange }: TaskCardPro
 
   const nextStatus = getNextStatus();
   const assignees = task.assignees || [];
+  const canEdit = userRole === 'admin' || userRole === 'manager';
 
   return (
     <GlassCard 
@@ -93,23 +95,25 @@ export function TaskCard({ task, onEdit, onDelete, onStatusChange }: TaskCardPro
             {priorityConfig[task.priority].label}
           </Badge>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="glass-card">
-            <DropdownMenuItem onClick={() => onEdit(task)}>
-              <Edit className="w-4 h-4 mr-2" />
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onDelete(task.id)} className="text-destructive">
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {canEdit && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="glass-card">
+              <DropdownMenuItem onClick={() => onEdit(task)}>
+                <Edit className="w-4 h-4 mr-2" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onDelete(task.id)} className="text-destructive">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       <h3 className="text-lg font-semibold mb-2">{task.title}</h3>
@@ -151,7 +155,7 @@ export function TaskCard({ task, onEdit, onDelete, onStatusChange }: TaskCardPro
         </div>
       </div>
 
-      {nextStatus && task.status !== 'cancelled' && (
+      {canEdit && nextStatus && task.status !== 'cancelled' && (
         <Button
           onClick={() => onStatusChange(task.id, nextStatus)}
           className="w-full"
@@ -160,6 +164,12 @@ export function TaskCard({ task, onEdit, onDelete, onStatusChange }: TaskCardPro
           Move to {statusConfig[nextStatus].label}
           <ChevronRight className="w-4 h-4 ml-2" />
         </Button>
+      )}
+      
+      {!canEdit && (
+        <div className="text-xs text-muted-foreground text-center py-2 bg-muted/30 rounded-lg">
+          View only - Contact admin/manager to edit
+        </div>
       )}
     </GlassCard>
   );

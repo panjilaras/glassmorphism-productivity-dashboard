@@ -49,26 +49,31 @@ export function Navigation() {
   const [currentUser, setCurrentUser] = React.useState<any>(null);
   const [loggingOut, setLoggingOut] = React.useState(false);
 
-  // Fetch current user to determine role (only if authenticated)
+  // Fetch current user from new API endpoint
   React.useEffect(() => {
     if (session?.user) {
       async function fetchCurrentUser() {
         try {
           const token = localStorage.getItem("bearer_token");
-          const response = await fetch('/api/users?limit=1', {
+          const response = await fetch('/api/auth/current-user', {
             headers: {
               'Authorization': `Bearer ${token}`
             }
           });
-          const data = await response.json();
-          if (Array.isArray(data) && data.length > 0) {
-            setCurrentUser(data[0]);
+          
+          if (response.ok) {
+            const data = await response.json();
+            setCurrentUser(data);
+          } else {
+            console.error('Failed to fetch current user');
           }
         } catch (error) {
           console.error('Failed to fetch user:', error);
         }
       }
       fetchCurrentUser();
+    } else {
+      setCurrentUser(null);
     }
   }, [session]);
 
