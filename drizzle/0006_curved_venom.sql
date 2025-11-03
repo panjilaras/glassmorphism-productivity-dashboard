@@ -1,0 +1,1 @@
+ALTER TABLE `tasks` ADD `updated_by` text REFERENCES user(id);

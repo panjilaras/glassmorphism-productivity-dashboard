@@ -36,6 +36,118 @@
       "when": 1761014685091,
       "tag": "0004_late_iron_fist",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1761119709904,
+      "tag": "0005_slow_nuke",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1761122882620,
+      "tag": "0006_curved_venom",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1761127007741,
+      "tag": "0007_first_preak",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1761133011985,
+      "tag": "0008_cynical_proudstar",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1761145424979,
+      "tag": "0009_good_quentin_quire",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1761149647204,
+      "tag": "0010_heavy_grandmaster",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1761169419638,
+      "tag": "0011_calm_doomsday",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1761194064530,
+      "tag": "0012_sad_mastermind",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1761208607806,
+      "tag": "0013_chief_rick_jones",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1761212682602,
+      "tag": "0014_aspiring_peter_parker",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1761370412970,
+      "tag": "0015_goofy_makkari",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1761370982734,
+      "tag": "0016_tired_lady_deathstrike",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1761390246328,
+      "tag": "0017_cute_skrulls",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1761539434426,
+      "tag": "0018_bouncy_nightmare",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1761730918652,
+      "tag": "0019_abandoned_jasper_sitwell",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1762182794142,
+      "tag": "0020_chilly_dracula",
+      "breakpoints": true
     }
   ]
 }

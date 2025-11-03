@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `manager_id` integer REFERENCES users(id);
