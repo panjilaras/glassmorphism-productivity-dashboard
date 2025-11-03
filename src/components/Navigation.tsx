@@ -28,8 +28,7 @@ import {
   MessageSquare,
   FileSpreadsheet,
   Moon,
-  Sun,
-  Settings
+  Sun
 } from 'lucide-react';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/button';
@@ -63,8 +62,7 @@ const navigation = [
     submenus: [
       { name: 'User', href: '/users', icon: Users },
       { name: 'Category', href: '/categories', icon: Tag },
-      { name: 'Theme', href: '/theme', icon: Palette },
-      { name: 'Default Settings', href: '/default-settings', icon: Settings }
+      { name: 'Theme', href: '/theme', icon: Palette }
     ]
   },
   {
