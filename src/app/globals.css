@@ -92,17 +92,17 @@
 
 .dark {
   --background: oklch(0.15 0.02 280);
-  --foreground: oklch(0.95 0.01 280);
+  --foreground: oklch(0.98 0.01 280);
   --card: oklch(0.2 0.02 280 / 0.7);
-  --card-foreground: oklch(0.95 0.01 280);
+  --card-foreground: oklch(0.98 0.01 280);
   --popover: oklch(0.18 0.02 280 / 0.85);
-  --popover-foreground: oklch(0.95 0.01 280);
+  --popover-foreground: oklch(0.98 0.01 280);
   --primary: oklch(0.75 0.15 280);
   --primary-foreground: oklch(0.1 0.02 280);
   --secondary: oklch(0.78 0.12 320);
   --secondary-foreground: oklch(0.1 0.02 280);
   --muted: oklch(0.25 0.02 280);
-  --muted-foreground: oklch(0.65 0.02 280);
+  --muted-foreground: oklch(0.75 0.02 280);
   --accent: oklch(0.75 0.13 200);
   --accent-foreground: oklch(0.1 0.02 280);
   --destructive: oklch(0.7 0.2 25);
@@ -115,11 +115,11 @@
   --chart-4: oklch(0.72 0.14 160);
   --chart-5: oklch(0.75 0.11 50);
   --sidebar: oklch(0.18 0.02 280 / 0.6);
-  --sidebar-foreground: oklch(0.95 0.01 280);
+  --sidebar-foreground: oklch(0.98 0.01 280);
   --sidebar-primary: oklch(0.75 0.15 280);
   --sidebar-primary-foreground: oklch(0.1 0.02 280);
   --sidebar-accent: oklch(0.22 0.02 280 / 0.8);
-  --sidebar-accent-foreground: oklch(0.95 0.01 280);
+  --sidebar-accent-foreground: oklch(0.98 0.01 280);
   --sidebar-border: oklch(1 0 0 / 0.12);
   --sidebar-ring: oklch(0.75 0.15 280);
 }
@@ -323,6 +323,32 @@
     --card-foreground: oklch(0.15 0.02 280);
     --muted-foreground: oklch(0.35 0.02 280);
     color: oklch(0.15 0.02 280);
+  }
+  
+  /* Enhanced dark mode text visibility */
+  .dark h1,
+  .dark h2,
+  .dark h3,
+  .dark h4,
+  .dark h5,
+  .dark h6 {
+    color: oklch(0.98 0.01 280);
+  }
+  
+  .dark table thead th {
+    color: oklch(0.98 0.01 280);
+  }
+  
+  .dark table tbody td {
+    color: oklch(0.92 0.01 280);
+  }
+  
+  .dark label {
+    color: oklch(0.95 0.01 280);
+  }
+  
+  .dark .text-muted-foreground:not(.aero-gradient-1 *, .aero-gradient-2 *, .aero-gradient-3 *, .aero-gradient-4 *) {
+    color: oklch(0.75 0.02 280);
   }
   
   .animate-float {
